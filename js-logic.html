@@ -1,0 +1,338 @@
+<script>
+    // --- ADMIN ACCESS LOGIC (SECURE) ---
+    function openAdminModal() {
+        document.getElementById('admin-modal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('adminPass').focus(), 100);
+    }
+
+    function closeAdminModal() {
+        document.getElementById('admin-modal').classList.add('hidden');
+        document.getElementById('adminPass').value = '';
+    }
+
+    function verifyAdmin() {
+        const pass = document.getElementById('adminPass').value;
+
+        // Llamada al servidor para validar hash/pass
+        google.script.run
+            .withSuccessHandler(isValid => {
+                if (isValid) {
+                    // Guardar en sesión para usarlo en el dashboard
+                    sessionStorage.setItem('adminKey', pass);
+
+                    // Redirigir
+                    google.script.run.withSuccessHandler(url => {
+                        window.open(url + '?view=dashboard', '_top');
+                    }).getScriptUrl();
+                } else {
+                    alert("Contraseña incorrecta");
+                    document.getElementById('adminPass').value = '';
+                    document.getElementById('adminPass').focus();
+                }
+            })
+            .verifyAdminAccess(pass);
+    }
+</script>
+
+<script>
+    let appData = {
+        user: {},
+        questions: { valanti: [], disc: [] },
+        answers: { valanti: [], disc: [] },
+        status: { valanti: false, disc: false },
+        indexes: { valanti: 0, disc: 0 },
+        current: { type: null },
+        seenInstructions: { valanti_p1: false, valanti_p2: false }
+    };
+
+    // 1. INICIAR Y CARGAR DATOS (Ahora carga getStaticQuestions)
+    window.onload = function () {
+        google.script.run
+            .withSuccessHandler(data => {
+                appData.questions = data;
+                document.getElementById('loading-overlay').classList.add('hidden');
+                showView('view-login');
+            })
+            .withFailureHandler(err => {
+                alert("Error crítico de conexión. Intente recargar.");
+                console.error(err);
+            })
+            .getStaticQuestions(); // LLAMADA A LA NUEVA FUNCIÓN
+    };
+
+    // 2. NAVEGACIÓN
+    function showView(id) {
+        document.querySelectorAll('.view-section').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('active');
+        });
+        const target = document.getElementById(id);
+        target.classList.remove('hidden');
+        target.classList.add('active');
+        window.scrollTo(0, 0);
+    }
+
+    // 3. LOGIN
+    document.getElementById('loginForm').onsubmit = function (e) {
+        e.preventDefault();
+        appData.user = {
+            nombre: document.getElementById('inp_nombre').value,
+            id: document.getElementById('inp_id').value,
+            edad: document.getElementById('inp_edad').value,
+            genero: document.getElementById('inp_genero').value,
+            sede: document.getElementById('inp_sede').value,
+            cargo: document.getElementById('inp_cargo').value,
+            estudios: document.getElementById('inp_estudio').value,
+        };
+        document.getElementById('headerName').innerText = appData.user.nombre;
+        document.getElementById('headerRole').innerText = appData.user.cargo;
+        document.getElementById('userInfoHeader').classList.remove('hidden');
+        showView('view-dashboard');
+    };
+
+    // 4. INICIAR PRUEBA
+    function startTest(type) {
+        const key = type.toLowerCase();
+        if (appData.status[key]) return;
+
+        appData.current.type = type;
+        // Resume from saved index if exists, otherwise 0
+        // We do NOT reset answers here to allow resuming
+        if (!appData.answers[key]) appData.answers[key] = [];
+
+        const wrapper = document.getElementById('test-wrapper');
+        const color = type === 'Valanti' ? 'var(--primary)' : 'var(--secondary)';
+        wrapper.style.borderColor = color;
+
+        document.getElementById('test-type-label').innerText = type;
+        document.getElementById('test-type-label').style.color = color;
+
+        renderQuestion();
+        showView('view-test');
+    }
+
+    function pauseTest() {
+        showView('view-dashboard');
+    }
+
+    // 5. RENDERIZAR
+    function renderQuestion() {
+        const type = appData.current.type;
+        const key = type.toLowerCase();
+        const idx = appData.indexes[key]; // Use stored index
+        const list = type === 'Valanti' ? appData.questions.valanti : appData.questions.disc;
+
+        if (idx >= list.length) {
+            finishSubTest(type);
+            return;
+        }
+
+        const q = list[idx];
+        const container = document.getElementById('dynamic-container');
+        document.getElementById('question-counter').innerText = `${idx + 1} / ${list.length}`;
+
+        // --- VALANTI ---
+        // --- VALANTI ---
+        if (type === 'Valanti') {
+            const part = (q.part) ? q.part : (idx < 9 ? 1 : 2);
+
+            const theme = part === 1 ? 'teal' : 'amber';
+            const title = part === 1 ? "Parte 1: Identificación Positiva" : "Parte 2: Lo más Inaceptable";
+
+            // Header Instruction Update
+            const instrEl = document.getElementById('test-instruction');
+            instrEl.innerHTML = title;
+            instrEl.className = `text-xl font-bold text-${theme}-600 transition-colors`;
+
+            // Modal Triggers
+            if (idx === 0 && !appData.seenInstructions.valanti_p1) {
+                showInstructionModal(
+                    "Instrucciones: Parte 1",
+                    `<p class="mb-2">Por favor marque 0, 1, 2 o 3 puntos en las casillas según la importancia que usted le da a cada frase en su vida personal.</p>
+                     <ul class="list-disc pl-5 mb-2 space-y-1">
+                        <li><strong>La suma debe ser siempre 3</strong> (3-0, 0-3, 2-1, 1-2).</li>
+                        <li>La opción con la que <strong>mejor se identifica</strong> debe tener el mayor puntaje.</li>
+                     </ul>`,
+                    "teal"
+                );
+                appData.seenInstructions.valanti_p1 = true;
+            } else if (idx === 9 && !appData.seenInstructions.valanti_p2) {
+                showInstructionModal(
+                    "Segunda Parte: Cambio de Enfoque",
+                    `<p class="mb-2 font-medium text-amber-800">¡Atención! Cambian las reglas:</p>
+                     <p class="mb-2">Por favor marque 0, 1, 2 o 3 puntos para la frase <strong>MÁS INACEPTABLE</strong> o que menos le guste.</p>
+                     <ul class="list-disc pl-5 mb-2 space-y-1">
+                        <li>El puntaje más alto (3) será para la frase que indique <strong>lo peor</strong>.</li>
+                        <li>La suma debe seguir siendo 3.</li>
+                     </ul>`,
+                    "amber"
+                );
+                appData.seenInstructions.valanti_p2 = true;
+            }
+
+            container.innerHTML = `
+                <div class="p-3 bg-${theme}-50 rounded border-l-4 border-${theme}-500 mb-6 text-sm text-${theme}-900 flex items-start animate-fadeIn">
+                    <i class="fas ${part === 1 ? 'fa-check' : 'fa-exclamation-triangle'} mt-1 mr-3 text-lg"></i> 
+                    <div>
+                        <p class="font-bold">${part === 1 ? 'Distribuye 3 puntos a lo que MÁS te identifica.' : 'Distribuye 3 puntos a lo que MENOS aceptas (Lo peor = 3).'}</p>
+                        <p class="text-xs opacity-80">La suma siempre debe ser 3.</p>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="p-6 bg-white border-2 border-slate-100 rounded-xl focus-within:border-${theme}-300 hover:border-${theme}-200 transition-colors shadow-sm">
+                        <p class="mb-4 font-medium text-lg text-slate-700">${q.pair[0]}</p>
+                        <div class="flex items-center">
+                            <span class="mr-3 text-sm font-bold text-slate-400">PUNTOS:</span>
+                            <input type="number" id="val_0" min="0" max="3" class="w-full p-3 border-2 rounded-lg text-center text-2xl font-bold text-${theme}-600 focus:border-${theme}-500 outline-none transition" placeholder="0">
+                        </div>
+                    </div>
+                    <div class="p-6 bg-white border-2 border-slate-100 rounded-xl focus-within:border-${theme}-300 hover:border-${theme}-200 transition-colors shadow-sm">
+                        <p class="mb-4 font-medium text-lg text-slate-700">${q.pair[1]}</p>
+                        <div class="flex items-center">
+                            <span class="mr-3 text-sm font-bold text-slate-400">PUNTOS:</span>
+                            <input type="number" id="val_1" min="0" max="3" class="w-full p-3 border-2 rounded-lg text-center text-2xl font-bold text-${theme}-600 focus:border-${theme}-500 outline-none transition" placeholder="0">
+                        </div>
+                    </div>
+                </div>`;
+
+            // Auto-calculation logic
+            setTimeout(() => {
+                const i0 = document.getElementById('val_0');
+                const i1 = document.getElementById('val_1');
+                if (!i0 || !i1) return;
+
+                i0.focus();
+
+                const handleInput = (source, target) => {
+                    let val = parseInt(source.value);
+                    if (isNaN(val)) {
+                        target.value = '';
+                        return;
+                    }
+                    if (val < 0) val = 0;
+                    if (val > 3) val = 3;
+
+                    // Update source if we clamped it
+                    if (val !== parseInt(source.value)) source.value = val;
+
+                    // Update target
+                    target.value = 3 - val;
+                };
+
+                i0.oninput = () => handleInput(i0, i1);
+                i1.oninput = () => handleInput(i1, i0);
+            }, 100);
+        }
+
+        // --- DISC ---
+        else {
+            document.getElementById('test-instruction').innerText = "Evalúa de 1 (Menos) a 4 (Más)";
+            let html = `
+                <p class="text-lg font-medium text-slate-800 mb-4 bg-slate-50 p-4 rounded-lg border">${q.text}</p>
+                <div class="p-3 bg-red-50 rounded border border-red-100 mb-6 text-sm text-red-800 flex items-center">
+                    <i class="fas fa-sort-numeric-up mr-2 text-lg"></i> Ordena las opciones usando 1, 2, 3 y 4. No puedes repetir números.
+                </div>
+                <div class="space-y-3">`;
+
+            q.options.forEach((opt, i) => {
+                html += `
+                <div class="flex flex-col sm:flex-row sm:items-center p-4 bg-white rounded-lg border hover:shadow-md transition-shadow">
+                    <span class="hidden sm:flex w-8 h-8 items-center justify-center bg-slate-100 rounded-full font-bold text-slate-500 mr-4 border">${['A', 'B', 'C', 'D'][i]}</span>
+                    <span class="flex-1 font-medium text-slate-700 mb-2 sm:mb-0">${opt}</span>
+                    <div class="flex items-center justify-end sm:ml-4">
+                       <span class="text-xs font-bold text-slate-400 mr-2 sm:hidden">VALOR (1-4):</span>
+                       <input type="number" data-idx="${i}" class="disc-input w-20 p-2 text-center text-xl font-bold border-2 rounded focus:border-red-500 outline-none" min="1" max="4">
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html + `</div>`;
+        }
+    }
+
+    // 6. VALIDAR
+    function nextQuestion() {
+        const type = appData.current.type;
+
+        if (type === 'Valanti') {
+            const v0 = parseInt(document.getElementById('val_0').value);
+            const v1 = parseInt(document.getElementById('val_1').value);
+
+            if (isNaN(v0) || isNaN(v1)) return alert("Por favor ingresa un número en ambas casillas (0, 1, 2 o 3).");
+            if (v0 < 0 || v1 < 0) return alert("No se permiten números negativos.");
+            if ((v0 + v1) !== 3) return alert(`La suma actual es ${v0 + v1}. Debe ser exactamente 3.`);
+
+            appData.answers.valanti.push(v0, v1);
+        }
+        else {
+            const inputs = Array.from(document.querySelectorAll('.disc-input'));
+            const values = inputs.map(i => parseInt(i.value));
+
+            if (values.some(isNaN)) return alert("Debes calificar todas las opciones.");
+            if (values.some(v => v < 1 || v > 4)) return alert("Solo usa los números 1, 2, 3 y 4.");
+
+            const unique = new Set(values);
+            if (unique.size !== 4) return alert("No puedes repetir números. Usa cada número (1,2,3,4) una sola vez.");
+
+            appData.answers.disc.push(...values);
+        }
+
+        const key = type.toLowerCase();
+        appData.indexes[key]++; // Update stored index
+        renderQuestion();
+    }
+
+    // 7. FINALIZAR MÓDULO
+    function finishSubTest(type) {
+        const key = type.toLowerCase();
+        appData.status[key] = true;
+
+        const btn = document.getElementById('btn-start-' + key);
+        btn.onclick = null;
+        btn.classList.add('opacity-60', 'grayscale');
+
+        const badge = document.getElementById('status-' + key);
+        badge.innerText = "COMPLETADO";
+        badge.className = "status-badge bg-green-100 text-green-600 inline-block px-2 py-1 rounded mt-4 font-bold";
+
+        // Show loading overlay instead of destroying wrapper
+        const loader = document.getElementById('loading-overlay');
+        const loaderText = loader.querySelector('p');
+        // Store original text to restore if needed, or just set distinct messages
+        loaderText.innerText = "Guardando respuestas...";
+        loader.classList.remove('hidden');
+
+        google.script.run
+            .withSuccessHandler(() => {
+                loader.classList.add('hidden'); // Hide loader
+                showView('view-dashboard');
+                if (appData.status.valanti && appData.status.disc) {
+                    setTimeout(() => showView('view-finish'), 1000);
+                }
+            })
+            .withFailureHandler(err => {
+                loader.classList.add('hidden');
+                alert("Error al guardar: " + err);
+            })
+            .saveTestResults(type, appData.user, appData.answers[key]);
+    }
+    function showInstructionModal(title, contentHtml, theme) {
+        const modal = document.getElementById('instruction-modal');
+        const modalContent = document.getElementById('modal-content');
+        const btn = document.getElementById('btn-modal-action');
+
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-body').innerHTML = contentHtml;
+
+        // Dynamic Styling
+        // Remove old theme classes (basic approach: remove all potential color classes or just overwrite)
+        modalContent.className = `bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all scale-100 p-6 border-l-8 border-${theme}-500`;
+
+        btn.className = `px-8 py-3 rounded-lg font-bold shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 text-white bg-${theme}-600 hover:bg-${theme}-700`;
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeInstructionModal() {
+        document.getElementById('instruction-modal').classList.add('hidden');
+    }
+</script>

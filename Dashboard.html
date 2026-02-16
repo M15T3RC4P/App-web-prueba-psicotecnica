@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <!-- Chart.js (Versión UMD requerida) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Estilos Unificados -->
+    <?!= include('css-styles'); ?>
+
+    <style>
+        /* Ajustes específicos para el Dashboard de Impresión */
+
+        /* Layout de Impresión A4 */
+        .print-container {
+            max-width: 21cm;
+            margin: 2rem auto;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: 29.7cm;
+            /* Altura A4 aproximada */
+            position: relative;
+        }
+
+        /* Encabezado Corporativo */
+        .report-header {
+            background-color: #334155;
+            /* Slate oscuro profesional */
+            color: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 4px solid var(--secondary-color);
+            /* Rojo de marca */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .report-section {
+            padding: 2rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-pill {
+            width: 6px;
+            height: 2rem;
+            border-radius: 99px;
+            margin-right: 0.75rem;
+        }
+
+        .pill-red {
+            background-color: var(--secondary-color);
+        }
+
+        .pill-teal {
+            background-color: var(--primary-color);
+        }
+
+        .section-heading {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        /* Tablas de Reporte */
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .report-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background-color: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .report-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+
+        /* Ajustes para gráficos en reporte */
+        .chart-container-print {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* Footer de Impresión */
+        .report-footer {
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+        }
+
+        /* Ajustes de Impresión Real */
+        @media print {
+            body {
+                background: white !important;
+                margin: 0;
+                padding: 0;
+            }
+
+            .print-container {
+                box-shadow: none;
+                margin: 0;
+                border: none;
+                width: 100%;
+                max-width: none;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .report-header {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .pill-red,
+            .pill-teal {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- BARRA SUPERIOR DE NAVEGACIÓN (No impresa) -->
+    <nav class="glass-card no-print"
+        style="margin: 0; border-radius: 0; border: none; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1rem 2rem; position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="font-weight: 700; color: var(--primary-color); font-size: 1.2rem;">
+            <i class="fas fa-chart-pie hover:animate-spin"></i> Dashboard de Resultados
+        </div>
+
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <div style="position: relative;">
+                <input type="text" id="searchInput" placeholder="Buscar por ID..." class="input-std"
+                    style="padding-right: 2.5rem;">
+                <button onclick="searchCandidate()"
+                    style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--primary-color); cursor: pointer;">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+
+            <button onclick="goToHome()" class="btn-secondary" title="Volver al Inicio">
+                <i class="fas fa-home"></i> Inicio
+            </button>
+
+            <button onclick="window.print()" class="btn-primary" title="Imprimir Reporte">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+        </div>
+    </nav>
+
+    <!-- SPINNER -->
+    <div id="loadingSpinner" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        <div
+            style="width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite;">
+        </div>
+        <p style="margin-top: 1rem; font-weight: 600; color: var(--primary-color);">Generando reporte...</p>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL DEL REPORTE -->
+    <main id="reportContainer" class="print-container hidden animate-fade-in">
+
+        <!-- ENCABEZADO -->
+        <header class="report-header">
+            <div>
+                <h1 style="margin: 0; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Informe
+                    Confidencial</h1>
+                <p style="margin: 0.25rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">Resultados de Evaluación Psicotécnica
+                </p>
+            </div>
+            <div style="text-align: right;">
+                <div style="background: white; padding: 0.25rem 0.5rem; border-radius: 4px;">
+                    <!-- REEMPLAZA EL ID DESPUÉS DE 'id=' CON EL TUYO -->
+                    <img src="https://drive.google.com/uc?export=view&id=1FTMO1RhFtDIhkRKaCT8NNLnanXUqNH9o" alt="Logo"
+                        style="height: 50px; object-fit: contain;">
+                </div>
+            </div>
+        </header>
+
+        <!-- SECCIÓN CANDIDATO -->
+        <section class="report-section" style="background-color: #f8fafc;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2 id="candName" style="margin: 0 0 0.5rem 0; font-size: 1.75rem; color: #1e293b;">Nombre Candidato
+                    </h2>
+                    <div style="display: flex; gap: 1rem; color: #64748b; font-weight: 500;">
+                        <span id="candRole" style="color: var(--primary-color); font-weight: 700;">Cargo</span>
+                        <span>|</span>
+                        <span id="candSede">Sede</span>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; color: #94a3b8;">Fecha Aplicación</div>
+                    <div id="candDate" style="font-size: 1.1rem; font-weight: 600; color: #334155;">---</div>
+                </div>
+            </div>
+
+            <div
+                style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                <div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Cédula/ID</div>
+                    <div id="candId" style="font-weight: 600;">---</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Edad</div>
+                    <div id="candAge" style="font-weight: 600;">---</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Género</div>
+                    <div id="candGender" style="font-weight: 600;">---</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Nivel Estudio</div>
+                    <div id="candEdu" style="font-weight: 600;">---</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOQUE DISC -->
+        <section class="report-section">
+            <div class="section-title">
+                <div class="section-pill pill-red"></div> <!-- Rojo corporativo -->
+                <div class="section-heading">Perfil DISC <span
+                        style="font-weight: normal; color: #94a3b8; font-size: 0.9rem; margin-left: 0.5rem;">(Comportamiento)</span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Tabla -->
+                <div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Factor</th>
+                                <th style="text-align: center;">Puntaje</th>
+                                <th style="text-align: center;">Nivel</th>
+                            </tr>
+                        </thead>
+                        <tbody id="discTableBody">
+                            <!-- Inyectado por JS -->
+                        </tbody>
+                    </table>
+                    <div
+                        style="margin-top: 1.5rem; padding: 1rem; background-color: #fff1f2; border-radius: 0.5rem; border-left: 4px solid var(--secondary-color);">
+                        <p id="discInterpretation"
+                            style="margin: 0; font-size: 0.9rem; color: #881337; font-style: italic;">
+                            Interpretación dinámica...
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Gráfico -->
+                <div class="chart-container-print">
+                    <canvas id="discChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOQUE VALANTI -->
+        <section class="report-section">
+            <div class="section-title">
+                <div class="section-pill pill-teal"></div> <!-- Teal corporativo -->
+                <div class="section-heading">Valores Valanti <span
+                        style="font-weight: normal; color: #94a3b8; font-size: 0.9rem; margin-left: 0.5rem;">(Ética y
+                        Valores)</span></div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Tabla -->
+                <div>
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Valor</th>
+                                <th style="text-align: center;">Puntaje</th>
+                            </tr>
+                        </thead>
+                        <tbody id="valantiTableBody">
+                            <!-- Inyectado por JS -->
+                        </tbody>
+                    </table>
+                    <div
+                        style="margin-top: 1.5rem; font-size: 0.85rem; color: #64748b; text-align: justify; line-height: 1.4;">
+                        Los puntajes reflejan la prioridad que el candidato da a cada valor universal. Valores más altos
+                        indican una fuerte alineación con el principio ético correspondiente.
+                    </div>
+                </div>
+
+                <!-- Gráfico -->
+                <div class="chart-container-print">
+                    <canvas id="valantiChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="report-footer">
+            <p style="margin: 0;">Reporte generado automáticamente por la Plataforma de Evaluación.</p>
+            <p style="margin: 0.25rem 0 0 0;">&copy; <span id="currentYear"></span> Departamento de Gestión Humana.</p>
+        </footer>
+
+    </main>
+
+    <!-- JS Logic Inclusion -->
+    <?!= include('Controller.js'); ?>
+
+</body>
+
+</html>

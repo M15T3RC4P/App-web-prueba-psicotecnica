@@ -1,0 +1,300 @@
+<script>
+    // Referencias a Charts para poder destruirlos y redibujarlos
+    let discChartInstance = null;
+    let valantiChartInstance = null;
+
+    // Paleta de Colores
+    const COLORS = {
+        teal: 'rgb(46, 156, 157)',
+        red: 'rgb(217, 33, 39)',
+        aqua: 'rgb(102, 187, 186)',
+        coral: 'rgb(237, 131, 128)',
+        lightblue: 'rgb(205, 238, 238)',
+        slate: '#334155'
+    };
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+        const yearEl = document.getElementById('currentYear');
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+        // Config global de Chart.js
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = COLORS.slate;
+        }
+
+        // Inicializar gráficos vacíos (estructura visual)
+        initCharts();
+    });
+
+    function initCharts() {
+        // Renderizar algo vacío para que se vea el espacio
+        // O simplemente esperar a la búsqueda
+    }
+
+    // Función Principal de Búsqueda
+    function searchCandidate() {
+        const input = document.getElementById('searchInput');
+        const id = input ? input.value.trim() : document.getElementById('inputId').value.trim();
+
+        if (!id) {
+            showToast("Por favor ingresa un ID o Cédula", "warning");
+            return;
+        }
+
+        // Recuperar clave de sesión
+        let adminKey = sessionStorage.getItem('adminKey');
+
+        // Si no hay clave, pedirla (Fallback simple)
+        if (!adminKey) {
+            adminKey = prompt("Sesión expirada o no iniciada. Ingrese contraseña de Administrador:");
+            if (!adminKey) {
+                showToast("Acceso denegado. Se requiere contraseña.", "error");
+                return;
+            }
+            // Guardar para la próxima
+            sessionStorage.setItem('adminKey', adminKey);
+        }
+
+        // UI Loading
+        const spinner = document.getElementById('loadingSpinner') || document.getElementById('loadingIndicator');
+        if (spinner) spinner.classList.remove('hidden');
+        if (spinner) spinner.style.display = 'flex'; // Asegurar visibilidad y centrado
+
+        // LLAMADA AL BACKEND CON CLAVE DE SEGURIDAD
+        google.script.run
+            .withSuccessHandler(handleSuccess)
+            .withFailureHandler(handleError)
+            .getPruebasData(id, adminKey);
+    }
+
+    function handleSuccess(response) {
+        const spinner = document.getElementById('loadingSpinner') || document.getElementById('loadingIndicator');
+        if (spinner) spinner.classList.add('hidden');
+        if (spinner) spinner.style.display = 'none';
+
+        if (!response.success) {
+            showToast(response.error || "No se encontraron datos", "error");
+            return;
+        }
+
+        // Mostrar el contenedor de reporte
+        const reportContainer = document.getElementById('reportContainer');
+        if (reportContainer) reportContainer.classList.remove('hidden');
+
+        // Renderizar Datos
+        // NOTA: getPruebasData devuelve {candidato, disc, valanti, etiquetasValanti}
+        const { candidato, disc, valanti, etiquetasValanti } = response;
+
+        renderCandidateInfo(candidato);
+
+        if (disc) {
+            renderDiscTable(disc);
+            renderDiscChart(disc);
+            document.getElementById('discInterpretation').textContent = interpretDisc(disc);
+        }
+
+        if (valanti) {
+            renderValantiTable(valanti, etiquetasValanti);
+            renderValantiChart(valanti, etiquetasValanti);
+        }
+
+        showToast("Datos cargados exitosamente", "success");
+    }
+
+    function handleError(error) {
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) spinner.classList.add('hidden');
+        showToast("Error de conexión: " + error.message, "error");
+        console.error(error);
+    }
+
+    // Navegación Segura a Inicio
+    function goToHome() {
+        // 1. Limpiar sesión de administrador
+        sessionStorage.removeItem('adminKey');
+
+        // 2. Obtener URL limpia y redirigir
+        google.script.run.withSuccessHandler(url => {
+            window.top.location.href = url;
+        }).getScriptUrl();
+    }
+
+    // Renderizado de Información Básica
+    function renderCandidateInfo(data) {
+        if (!data) return;
+        setText('candName', data.nombre);
+        setText('candRole', data.cargo);
+        setText('candSede', data.sede);
+        setText('candId', data.cedula || data.id); // Soporte para ambos nombres de propiedad
+        setText('candAge', data.edad ? data.edad + " años" : "");
+        setText('candGender', data.genero);
+        setText('candEdu', data.estudios);
+
+        // Fecha
+        const today = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+        setText('candDate', today);
+    }
+
+    // ==========================================
+    // LÓGICA DE GRÁFICOS (Migrada y Mejorada)
+    // ==========================================
+
+    function renderDiscTable(disc) {
+        const labels = ['Dominancia (D)', 'Influencia (I)', 'Estabilidad (S)', 'Cumplimiento (C)'];
+        const scores = [disc.D, disc.I, disc.S, disc.C];
+        const tbody = document.getElementById('discTableBody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+        labels.forEach((label, index) => {
+            const score = scores[index];
+            const intensity = score > 50 ? "Alto" : (score > 20 ? "Medio" : "Bajo"); // Ajustar umbrales según metodología real
+            const row = `
+                <tr>
+                    <td class="p-2 font-medium">${label}</td>
+                    <td class="p-2 text-center font-bold">${score}</td>
+                    <td class="p-2 text-center text-sm text-gray-500">${intensity}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function renderDiscChart(disc) {
+        const ctx = document.getElementById('discChart').getContext('2d');
+        if (discChartInstance) discChartInstance.destroy();
+
+        discChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['D', 'I', 'S', 'C'],
+                datasets: [{
+                    label: 'Puntaje',
+                    data: [disc.D, disc.I, disc.S, disc.C],
+                    backgroundColor: [
+                        COLORS.red,     // D - Rojo
+                        COLORS.aqua,    // I - Verde Agua
+                        COLORS.coral,   // S - Coral
+                        COLORS.teal     // C - Teal (azuloso)
+                    ],
+                    borderColor: [COLORS.red, COLORS.aqua, COLORS.coral, COLORS.teal],
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Horizontal
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function renderValantiTable(valanti, labels) {
+        const scores = [valanti.valor1, valanti.valor2, valanti.valor3, valanti.valor4, valanti.valor5];
+        const tbody = document.getElementById('valantiTableBody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+        labels = labels || ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+
+        labels.forEach((label, index) => {
+            const score = scores[index];
+            const row = `
+                <tr>
+                    <td class="p-2 font-medium">${label}</td>
+                    <td class="p-2 text-center font-bold" style="color: var(--color-teal)">${score}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function renderValantiChart(valanti, labels) {
+        const ctx = document.getElementById('valantiChart').getContext('2d');
+        if (valantiChartInstance) valantiChartInstance.destroy();
+
+        const scores = [valanti.valor1, valanti.valor2, valanti.valor3, valanti.valor4, valanti.valor5];
+        labels = labels || ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+
+        valantiChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Valores',
+                    data: scores,
+                    fill: true,
+                    backgroundColor: 'rgba(46, 156, 157, 0.2)', // Teal transparente
+                    borderColor: COLORS.teal,
+                    pointBackgroundColor: COLORS.teal,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: COLORS.teal
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: '#e2e8f0' },
+                        grid: { color: '#e2e8f0' },
+                        pointLabels: {
+                            font: { size: 12, weight: 'bold', family: "'Inter', sans-serif" },
+                            color: COLORS.slate
+                        },
+                        suggestedMin: 0
+                    }
+                },
+                plugins: {
+                    legend: { display: false } // Ya sabemos que son valores
+                }
+            }
+        });
+    }
+
+    function interpretDisc(disc) {
+        // Encontrar el mayor
+        const max = Math.max(disc.D, disc.I, disc.S, disc.C);
+        let dominant = '';
+        if (max === disc.D) dominant = 'Dominancia (D)';
+        else if (max === disc.I) dominant = 'Influencia (I)';
+        else if (max === disc.S) dominant = 'Estabilidad (S)';
+        else if (max === disc.C) dominant = 'Cumplimiento (C)';
+
+        return `Perfil predominante: ${dominant}. El candidato muestra tendencias comportamentales alineadas con este factor.`;
+    }
+
+    // Helpers
+    function setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text ? text : '---';
+    }
+
+    function showToast(message, type = 'info') {
+        let toast = document.getElementById('toast-notification');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'toast-notification';
+            toast.className = 'fixed bottom-5 right-5 px-6 py-4 rounded shadow-lg text-white font-bold transition-opacity duration-500 z-[200]';
+            document.body.appendChild(toast);
+        }
+
+        // Colores Toast basados en paleta
+        if (type === 'error') toast.style.backgroundColor = COLORS.red;
+        else if (type === 'success') toast.style.backgroundColor = COLORS.teal;
+        else toast.style.backgroundColor = COLORS.aqua;
+
+        toast.textContent = message;
+        toast.style.opacity = '1';
+        setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+    }
+</script>
