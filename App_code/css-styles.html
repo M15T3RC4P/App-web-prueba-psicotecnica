@@ -3,33 +3,39 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
   :root {
-    /* PALETA DE COLORES DEL USUARIO */
+    /* PALETA DE COLORES ASMET SALUD */
 
     /* Primarios */
-    --color-teal: rgb(46, 156, 157);
-    /* #2E9C9D */
+    --color-teal: rgb(32, 142, 143);
+    /* Un teal más profundo y corporativo */
     --color-red: rgb(217, 33, 39);
-    /* #D92127 */
+    /* #D92127 (Acento/Alerta) */
+    --color-teal-dark: rgb(23, 105, 106);
+    --color-teal-light: rgb(75, 172, 172);
 
     /* Complementarios */
     --color-white: rgb(255, 255, 255);
-    --color-lightblue: rgb(205, 238, 238);
-    /* #CDEEEE */
+    --color-lightblue: rgb(224, 242, 241);
+    /* Verde agua muy claro para fondos suaves */
     --color-aqua: rgb(102, 187, 186);
-    --color-coral: rgb(237, 131, 128);
 
     /* Mapeo al Sistema de Diseño */
     --primary-color: var(--color-teal);
+    --primary-dark: var(--color-teal-dark);
     --secondary-color: var(--color-red);
 
     /* Fondos y UI */
-    --body-bg: #f0f9f9;
-    /* Un tono muy suave derivado del celeste */
-    --card-bg: rgba(255, 255, 255, 0.98);
+    --body-bg: #f8fafc;
+    /* Gris azulado muy tenue, más limpio */
+    --card-bg: rgba(255, 255, 255, 0.95);
     --input-border: #cbd5e1;
     --input-focus: var(--color-teal);
 
-    /* Colores de Alerta (Ajustados a la paleta si es posible, o estándar) */
+    /* Superficies Glassmorphism */
+    --glass-border: rgba(32, 142, 143, 0.15);
+    --glass-shadow: 0 8px 32px 0 rgba(32, 142, 143, 0.05);
+
+    /* Colores de Alerta (Mantenidos para compatibilidad) */
     --success-bg: #d1fae5;
     --success-text: #065f46;
     --error-bg: #fee2e2;
@@ -50,12 +56,15 @@
   body {
     font-family: 'Inter', sans-serif;
     background-color: var(--body-bg);
-    /* Opcional: Gradiente sutil si se desea, pero plano es más limpio para dashboards */
-    background-image: linear-gradient(135deg, var(--color-lightblue) 0%, #ffffff 100%);
+    background-image:
+      radial-gradient(at 0% 0%, hsla(177, 41%, 89%, 1) 0, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(178, 41%, 94%, 1) 0, transparent 50%);
+    background-attachment: fixed;
     min-height: 100vh;
     margin: 0;
     padding: 0;
     color: #334155;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* Contenedor Principal */
@@ -65,23 +74,25 @@
     padding: 0 1rem;
   }
 
-  /* Cards / Tarjetas */
+  /* Cards / Tarjetas Generales - Glassmorphism Mejorado */
   .glass-card,
   .card-test {
     background: var(--card-bg);
-    border: 1px solid rgba(46, 156, 157, 0.1);
-    /* Borde sutil Teal */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
     padding: 2rem;
     border-radius: 1rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--glass-shadow);
     margin-bottom: 2rem;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-card:hover,
   .card-test:hover {
-    box-shadow: 0 10px 15px -3px rgba(46, 156, 157, 0.1);
-    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -8px rgba(32, 142, 143, 0.25);
+    transform: translateY(-3px);
+    border-color: rgba(32, 142, 143, 0.3);
   }
 
   /* Encabezados unificados */
@@ -103,37 +114,45 @@
     font-size: 1.1rem;
   }
 
-  /* Botones Estándar */
+  /* Botones Estándar Mejorados */
   .btn-primary {
-    background: linear-gradient(135deg, var(--color-teal) 0%, var(--color-aqua) 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
+    /* Más redondeado y moderno */
     font-weight: 600;
+    letter-spacing: 0.025em;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     text-decoration: none;
     display: inline-block;
-    box-shadow: 0 4px 6px rgba(46, 156, 157, 0.2);
+    box-shadow: 0 4px 12px rgba(32, 142, 143, 0.25);
   }
 
   .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 8px rgba(46, 156, 157, 0.3);
-    filter: brightness(1.05);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(32, 142, 143, 0.35);
+    background: linear-gradient(135deg, var(--color-teal-light) 0%, var(--primary-color) 100%);
+  }
+
+  .btn-primary:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(32, 142, 143, 0.2);
   }
 
   .btn-secondary {
-    background: white;
-    color: var(--color-teal);
-    border: 2px solid var(--color-teal);
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    color: var(--primary-color);
+    border: 1.5px solid var(--primary-color);
+    padding: 0.6rem 1.25rem;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -141,26 +160,30 @@
   }
 
   .btn-secondary:hover {
-    background: var(--color-lightblue);
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 10px rgba(32, 142, 143, 0.2);
   }
 
   /* Inputs Estándar */
   .input-std,
   .inp {
     width: 100%;
-    padding: 0.75rem;
-    border: 2px solid var(--input-border);
-    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--input-border);
+    border-radius: 0.75rem;
     font-size: 1rem;
-    transition: border-color 0.2s;
-    background: white;
+    color: #1e293b;
+    transition: all 0.25s ease;
+    background: rgba(255, 255, 255, 0.9);
     outline: none;
   }
 
   .input-std:focus,
   .inp:focus {
-    border-color: var(--color-teal);
-    box-shadow: 0 0 0 3px rgba(46, 156, 157, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(32, 142, 143, 0.15);
+    background: #ffffff;
   }
 
   /* Input personalizado para numeros grandes (quita spinner) */
