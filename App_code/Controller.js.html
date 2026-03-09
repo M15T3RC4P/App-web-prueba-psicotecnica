@@ -30,14 +30,68 @@
     });
 
     function initCharts() {
-        // Renderizar algo vacío para que se vea el espacio
-        // O simplemente esperar a la búsqueda
+        const discCtx = document.getElementById('discChart');
+        if (discCtx) {
+            discChartInstance = new Chart(discCtx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['D', 'I', 'S', 'C'],
+                    datasets: [{
+                        label: 'Puntaje',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: '#e2e8f0',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, max: 100 },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const valCtx = document.getElementById('valantiChart');
+        if (valCtx) {
+            valantiChartInstance = new Chart(valCtx.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'],
+                    datasets: [{
+                        label: 'Valores',
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: 'rgba(226, 232, 240, 0.4)',
+                        borderColor: '#cbd5e1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: { suggestedMin: 0, suggestedMax: 100 }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
     }
 
     // Función Principal de Búsqueda
     function searchCandidate() {
+        // En Dashboard.html el input tiene id "searchInput"
         const input = document.getElementById('searchInput');
-        const id = input ? input.value.trim() : document.getElementById('inputId').value.trim();
+        let id = '';
+
+        if (input && input.value.trim() !== '') {
+            id = input.value.trim();
+        } else if (document.getElementById('inputId') && document.getElementById('inputId').value.trim() !== '') {
+            id = document.getElementById('inputId').value.trim();
+        }
 
         if (!id) {
             showToast("Por favor ingresa un ID o Cédula", "warning");
@@ -80,7 +134,7 @@
             return;
         }
 
-        // Mostrar el contenedor de reporte
+        // Mostrar el contenedor de reporte (por seguridad)
         const reportContainer = document.getElementById('reportContainer');
         if (reportContainer) reportContainer.classList.remove('hidden');
 
@@ -90,15 +144,22 @@
 
         renderCandidateInfo(candidato);
 
-        if (disc) {
+        if (disc && Object.keys(disc).length > 0 && disc.D !== undefined) {
             renderDiscTable(disc);
             renderDiscChart(disc);
-            document.getElementById('discInterpretation').textContent = interpretDisc(disc);
+            setText('discHighestChar', disc.highestChar);
+            setText('discFullInterpretation', disc.interpretation);
+        } else {
+            // Ocultar o limpiar visualmente si no hay DISC
+            initCharts();
         }
 
-        if (valanti) {
+        if (valanti && Object.keys(valanti).length > 0 && valanti.valor1 !== undefined) {
             renderValantiTable(valanti, etiquetasValanti);
             renderValantiChart(valanti, etiquetasValanti);
+
+            setText('valantiHighest', valanti.highestChar);
+            renderValantiInterpretations(valanti, etiquetasValanti);
         }
 
         showToast("Datos cargados exitosamente", "success");
@@ -134,8 +195,20 @@
         setText('candEdu', data.estudios);
 
         // Fecha
-        const today = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
-        setText('candDate', today);
+        let applicationDate = '---';
+        if (data.fecha) {
+            try {
+                const dateObj = new Date(data.fecha);
+                if (!isNaN(dateObj)) {
+                    applicationDate = dateObj.toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+                } else {
+                    applicationDate = data.fecha;
+                }
+            } catch (e) {
+                applicationDate = data.fecha;
+            }
+        }
+        setText('candDate', applicationDate);
     }
 
     // ==========================================
@@ -211,6 +284,7 @@
             const row = `
                 <tr>
                     <td class="p-2 font-medium">${label}</td>
+                    <td class="p-2 text-center text-slate-500 font-medium text-sm">Estándar</td>
                     <td class="p-2 text-center font-bold" style="color: var(--color-teal)">${score}</td>
                 </tr>
             `;
@@ -262,16 +336,30 @@
         });
     }
 
-    function interpretDisc(disc) {
-        // Encontrar el mayor
-        const max = Math.max(disc.D, disc.I, disc.S, disc.C);
-        let dominant = '';
-        if (max === disc.D) dominant = 'Dominancia (D)';
-        else if (max === disc.I) dominant = 'Influencia (I)';
-        else if (max === disc.S) dominant = 'Estabilidad (S)';
-        else if (max === disc.C) dominant = 'Cumplimiento (C)';
+    function renderValantiInterpretations(valanti, labels) {
+        const grid = document.getElementById('valantiInterpretationsGrid');
+        if (!grid) return;
 
-        return `Perfil predominante: ${dominant}. El candidato muestra tendencias comportamentales alineadas con este factor.`;
+        const interpretations = [valanti.int1, valanti.int2, valanti.int3, valanti.int4, valanti.int5];
+        labels = labels || ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+
+        grid.innerHTML = '';
+        labels.forEach((label, index) => {
+            const interpretation = interpretations[index];
+            if (!interpretation) return;
+
+            const card = `
+                <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="font-weight: 700; color: var(--color-teal); margin-bottom: 0.5rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem;">
+                        ${label}
+                    </div>
+                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.6; text-align: justify;">
+                        ${interpretation}
+                    </div>
+                </div>
+            `;
+            grid.innerHTML += card;
+        });
     }
 
     // Helpers

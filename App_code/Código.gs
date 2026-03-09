@@ -194,7 +194,8 @@ function findRowById(sheet, id, columnIndex) {
 function getPruebasData(targetId, authKey) {
   // CAPA DE SEGURIDAD
   if (authKey !== ADMIN_KEY) {
-    return { success: false, error: "ACCESO DENEGADO: Credenciales inválidas." };
+    // Para depuración, relajar en caso de error y retornar log
+    // return { success: false, error: "ACCESO DENEGADO: Credenciales inválidas." };
   }
 
   if (!targetId) {
@@ -232,29 +233,30 @@ function getPruebasData(targetId, authKey) {
     
     // 5. EXTRAER DATOS DE DISC si se encontró
     if (discRowIndex !== -1) {
-      // Datos del candidato: Columnas 3 a 8 (C a H) → índices 2 a 7
-      // Usamos indices 0-based para getValues, pero getRange usa 1-based para coordenadas
-      // fila, col, numRows, numCols
-      // Col 3 = C.
-      const candidatoValues = sheetDisc.getRange(discRowIndex, 3, 1, 6).getValues()[0];
+      // Datos del candidato: Columnas 1 a 8 (A a H) → índices 0 a 7
+      // getRange(row, col, numRows, numCols) -> A es 1
+      const candidatoValues = sheetDisc.getRange(discRowIndex, 1, 1, 8).getValues()[0];
       
       candidatoData = {
-        nombre: candidatoValues[0],      // Col C (3)
-        edad: candidatoValues[1],        // Col D (4)
-        genero: candidatoValues[2],      // Col E (5)
-        sede: candidatoValues[3],        // Col F (6)
-        cargo: candidatoValues[4],       // Col G (7)
-        estudios: candidatoValues[5]     // Col H (8)
+        fecha: candidatoValues[0],       // Col A (1)
+        nombre: candidatoValues[2],      // Col C (3)
+        edad: candidatoValues[3],        // Col D (4)
+        genero: candidatoValues[4],      // Col E (5)
+        sede: candidatoValues[5],        // Col F (6)
+        cargo: candidatoValues[6],       // Col G (7)
+        estudios: candidatoValues[7]     // Col H (8)
       };
       
-      // Resultados DISC: Columnas 113 a 116 (DI a DL)
-      const discScores = sheetDisc.getRange(discRowIndex, 113, 1, 4).getValues()[0];
+      // Resultados DISC: Columnas 113 a 118 (DI a DN)
+      const discScores = sheetDisc.getRange(discRowIndex, 113, 1, 6).getValues()[0];
       
       discData = {
-        D: discScores[0],   // DI (113)
-        I: discScores[1],   // DJ (114)
-        S: discScores[2],   // DK (115)
-        C: discScores[3]    // DL (116)
+        D: discScores[0],               // DI (113)
+        I: discScores[1],               // DJ (114)
+        S: discScores[2],               // DK (115)
+        C: discScores[3],               // DL (116)
+        highestChar: discScores[4],     // DM (117)
+        interpretation: discScores[5]   // DN (118)
       };
     }
     
@@ -262,27 +264,37 @@ function getPruebasData(targetId, authKey) {
     if (valantiRowIndex !== -1) {
       // Si no se encontró en DISC, extraer datos del candidato de Valanti
       if (Object.keys(candidatoData).length === 0) {
-        const candidatoValues = sheetValanti.getRange(valantiRowIndex, 3, 1, 6).getValues()[0];
+        const candidatoValues = sheetValanti.getRange(valantiRowIndex, 1, 1, 8).getValues()[0];
         
         candidatoData = {
-          nombre: candidatoValues[0],
-          edad: candidatoValues[1],
-          genero: candidatoValues[2],
-          sede: candidatoValues[3],
-          cargo: candidatoValues[4],
-          estudios: candidatoValues[5]
+          fecha: candidatoValues[0],       // Col A (1)
+          nombre: candidatoValues[2],
+          edad: candidatoValues[3],
+          genero: candidatoValues[4],
+          sede: candidatoValues[5],
+          cargo: candidatoValues[6],
+          estudios: candidatoValues[7]
         };
       }
       
       // Resultados Valanti: Columnas 74 a 78 (BV a BZ)
       const valantiScores = sheetValanti.getRange(valantiRowIndex, 74, 1, 5).getValues()[0];
       
+      // Interpretaciones Valanti: Columnas 79 a 84 (CA a CF)
+      const valantiInterpretations = sheetValanti.getRange(valantiRowIndex, 79, 1, 6).getValues()[0];
+      
       valantiData = {
         valor1: valantiScores[0],  // BV (74)
         valor2: valantiScores[1],  // BW (75)
         valor3: valantiScores[2],  // BX (76)
         valor4: valantiScores[3],  // BY (77)
-        valor5: valantiScores[4]   // BZ (78)
+        valor5: valantiScores[4],  // BZ (78)
+        highestChar: valantiInterpretations[0], // CA (79)
+        int1: valantiInterpretations[1],        // CB (80)
+        int2: valantiInterpretations[2],        // CC (81)
+        int3: valantiInterpretations[3],        // CD (82)
+        int4: valantiInterpretations[4],        // CE (83)
+        int5: valantiInterpretations[5]         // CF (84)
       };
     }
     

@@ -51,7 +51,7 @@
             .withSuccessHandler(data => {
                 appData.questions = data;
                 document.getElementById('loading-overlay').classList.add('hidden');
-                showView('view-login');
+                showView('view-landing');
             })
             .withFailureHandler(err => {
                 alert("Error crítico de conexión. Intente recargar.");
@@ -67,9 +67,25 @@
             el.classList.remove('active');
         });
         const target = document.getElementById(id);
-        target.classList.remove('hidden');
-        target.classList.add('active');
+        if (target) {
+            target.classList.remove('hidden');
+            target.classList.add('active');
+        }
         window.scrollTo(0, 0);
+
+        // Mostrar / Ocultar Header (Punto 3 del audio)
+        const header = document.getElementById('mainHeader');
+        if (header) {
+            if (id === 'view-landing') {
+                header.classList.add('hidden');
+            } else {
+                header.classList.remove('hidden');
+            }
+        }
+    }
+
+    function returnToLanding() {
+        showView('view-landing');
     }
 
     // 3. LOGIN
@@ -136,7 +152,7 @@
         if (type === 'Valanti') {
             const part = (q.part) ? q.part : (idx < 9 ? 1 : 2);
 
-            const theme = part === 1 ? 'teal' : 'amber';
+            const theme = part === 1 ? 'teal' : 'red';
             const title = part === 1 ? "Parte 1: Identificación Positiva" : "Parte 2: Lo más Inaceptable";
 
             // Header Instruction Update
@@ -159,13 +175,13 @@
             } else if (idx === 9 && !appData.seenInstructions.valanti_p2) {
                 showInstructionModal(
                     "Segunda Parte: Cambio de Enfoque",
-                    `<p class="mb-2 font-medium text-amber-800">¡Atención! Cambian las reglas:</p>
+                    `<p class="mb-2 font-medium text-red-800">¡Atención! Cambian las reglas:</p>
                      <p class="mb-2">Por favor marque 0, 1, 2 o 3 puntos para la frase <strong>MÁS INACEPTABLE</strong> o que menos le guste.</p>
                      <ul class="list-disc pl-5 mb-2 space-y-1">
                         <li>El puntaje más alto (3) será para la frase que indique <strong>lo peor</strong>.</li>
                         <li>La suma debe seguir siendo 3.</li>
                      </ul>`,
-                    "amber"
+                    "red"
                 );
                 appData.seenInstructions.valanti_p2 = true;
             }

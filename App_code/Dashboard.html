@@ -148,14 +148,17 @@
     <!-- BARRA SUPERIOR DE NAVEGACIÓN (No impresa) -->
     <nav class="glass-card no-print"
         style="margin: 0; border-radius: 0; border: none; border-bottom: 1px solid rgba(0,0,0,0.05); padding: 1rem 2rem; position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-        <div style="font-weight: 700; color: var(--primary-color); font-size: 1.2rem;">
-            <i class="fas fa-chart-pie hover:animate-spin"></i> Dashboard de Resultados
+        <div
+            style="font-weight: 700; color: var(--primary-color); font-size: 1.2rem; display: flex; align-items: center; gap: 1rem;">
+            <img src="https://clinicaospedalemanizales.com/wp-content/uploads/2022/08/asmetsalud-imagen-destacada.png"
+                alt="Logo Asmet Salud" style="height: 35px; object-fit: contain;">
+            <span><i class="fas fa-chart-pie hover:animate-spin"></i> Dashboard de Resultados</span>
         </div>
 
         <div style="display: flex; gap: 1rem; align-items: center;">
             <div style="position: relative;">
                 <input type="text" id="searchInput" placeholder="Buscar por ID..." class="input-std"
-                    style="padding-right: 2.5rem;">
+                    style="padding-right: 2.5rem;" onkeypress="if(event.key === 'Enter') searchCandidate()">
                 <button onclick="searchCandidate()"
                     style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--primary-color); cursor: pointer;">
                     <i class="fas fa-search"></i>
@@ -182,7 +185,7 @@
     </div>
 
     <!-- CONTENEDOR PRINCIPAL DEL REPORTE -->
-    <main id="reportContainer" class="print-container hidden animate-fade-in">
+    <main id="reportContainer" class="print-container animate-fade-in">
 
         <!-- ENCABEZADO -->
         <header class="report-header">
@@ -250,33 +253,35 @@
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                <!-- Tabla -->
-                <div>
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th>Factor</th>
-                                <th style="text-align: center;">Puntaje</th>
-                                <th style="text-align: center;">Nivel</th>
-                            </tr>
-                        </thead>
-                        <tbody id="discTableBody">
-                            <!-- Inyectado por JS -->
-                        </tbody>
-                    </table>
-                    <div
-                        style="margin-top: 1.5rem; padding: 1rem; background-color: #fff1f2; border-radius: 0.5rem; border-left: 4px solid var(--secondary-color);">
-                        <p id="discInterpretation"
-                            style="margin: 0; font-size: 0.9rem; color: #881337; font-style: italic;">
-                            Interpretación dinámica...
-                        </p>
-                    </div>
-                </div>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Factor</th>
+                            <th style="text-align: center;">Puntaje</th>
+                            <th style="text-align: center;">Nivel</th>
+                        </tr>
+                    </thead>
+                    <tbody id="discTableBody">
+                        <!-- Inyectado por JS -->
+                    </tbody>
+                </table>
+            </div>
 
-                <!-- Gráfico -->
-                <div class="chart-container-print">
-                    <canvas id="discChart"></canvas>
-                </div>
+            <!-- Gráfico -->
+            <div class="chart-container-print">
+                <canvas id="discChart"></canvas>
+            </div>
+            </div>
+
+            <!-- Nuevo Bloque Interpretación DISC -->
+            <div
+                style="margin-top: 2rem; border-left: 4px solid var(--secondary-color); background-color: #fff1f2; padding: 1.5rem; border-radius: 0.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #881337; font-size: 1.15rem; font-weight: 700;"
+                    id="discHighestChar">Característica Principal</h4>
+                <p id="discFullInterpretation"
+                    style="margin: 0; font-size: 0.95rem; color: #4c0519; line-height: 1.6; text-align: justify;">
+                    Interpretación detallada...
+                </p>
             </div>
         </section>
 
@@ -296,6 +301,7 @@
                         <thead>
                             <tr>
                                 <th>Valor</th>
+                                <th style="text-align: center;">Valor Esperado</th>
                                 <th style="text-align: center;">Puntaje</th>
                             </tr>
                         </thead>
@@ -313,6 +319,25 @@
                 <!-- Gráfico -->
                 <div class="chart-container-print">
                     <canvas id="valantiChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Nuevo Bloque Interpretación Valanti -->
+            <div style="margin-top: 2.5rem;">
+                <div
+                    style="background-color: #f1f5f9; padding: 1.25rem; border-radius: 0.5rem; border-left: 4px solid var(--primary-color); margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <h4 style="margin: 0; color: #1e293b; font-size: 1.15rem; font-weight: 600;">Valor más destacado:
+                        <span id="valantiHighest"
+                            style="color: var(--primary-color); font-weight: 800; text-transform: uppercase;">---</span>
+                    </h4>
+                </div>
+
+                <!-- Grilla de tarjetas para interpretaciones -->
+                <h5 style="color: #64748b; font-size: 0.95rem; margin-bottom: 1rem; margin-top: 0;">Análisis por Valor:
+                </h5>
+                <div id="valantiInterpretationsGrid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <!-- Inyectado por JS -->
                 </div>
             </div>
         </section>
