@@ -81,6 +81,35 @@
         }
     }
 
+    function clearDashboard() {
+        const reportContainer = document.getElementById('reportContainer');
+        if (reportContainer) reportContainer.classList.add('hidden');
+
+        const textFields = ['candName', 'candRole', 'candSede', 'candId', 'candAge', 'candGender', 'candEdu', 'candDate', 'discHighestChar', 'discFullInterpretation', 'valantiHighest'];
+        textFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '---';
+        });
+
+        const discTableBody = document.getElementById('discTableBody');
+        if (discTableBody) discTableBody.innerHTML = '';
+
+        const valantiTableBody = document.getElementById('valantiTableBody');
+        if (valantiTableBody) valantiTableBody.innerHTML = '';
+
+        const valantiGrid = document.getElementById('valantiInterpretationsGrid');
+        if (valantiGrid) valantiGrid.innerHTML = '';
+
+        if (discChartInstance) {
+            discChartInstance.data.datasets[0].data = [0, 0, 0, 0];
+            discChartInstance.update();
+        }
+        if (valantiChartInstance) {
+            valantiChartInstance.data.datasets[0].data = [0, 0, 0, 0, 0];
+            valantiChartInstance.update();
+        }
+    }
+
     // Función Principal de Búsqueda
     function searchCandidate() {
         // En Dashboard.html el input tiene id "searchInput"
@@ -112,6 +141,9 @@
             sessionStorage.setItem('adminKey', adminKey);
         }
 
+        // LIMPIAR DASHBOARD ANTES DE BUSCAR
+        clearDashboard();
+
         // UI Loading
         const spinner = document.getElementById('loadingSpinner') || document.getElementById('loadingIndicator');
         if (spinner) spinner.classList.remove('hidden');
@@ -131,6 +163,9 @@
 
         if (!response.success) {
             showToast(response.error || "No se encontraron datos", "error");
+            if (response.error && response.error.includes("ACCESO DENEGADO")) {
+                sessionStorage.removeItem('adminKey');
+            }
             return;
         }
 
@@ -150,8 +185,10 @@
             setText('discHighestChar', disc.highestChar);
             setText('discFullInterpretation', disc.interpretation);
         } else {
-            // Ocultar o limpiar visualmente si no hay DISC
-            initCharts();
+            const tbody = document.getElementById('discTableBody');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500">Prueba DISC no realizada o sin datos</td></tr>';
+            setText('discHighestChar', 'Sin Datos');
+            setText('discFullInterpretation', 'El candidato no presenta resultados en esta prueba.');
         }
 
         if (valanti && Object.keys(valanti).length > 0 && valanti.valor1 !== undefined) {
@@ -160,6 +197,12 @@
 
             setText('valantiHighest', valanti.highestChar);
             renderValantiInterpretations(valanti, etiquetasValanti);
+        } else {
+            const tbody = document.getElementById('valantiTableBody');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500">Prueba Valanti no realizada o sin datos</td></tr>';
+            setText('valantiHighest', 'Sin Datos');
+            const grid = document.getElementById('valantiInterpretationsGrid');
+            if (grid) grid.innerHTML = '<div class="p-4 text-center text-slate-500 col-span-full">El candidato no presenta resultados en esta prueba.</div>';
         }
 
         showToast("Datos cargados exitosamente", "success");

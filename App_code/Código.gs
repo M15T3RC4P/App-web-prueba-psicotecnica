@@ -194,8 +194,7 @@ function findRowById(sheet, id, columnIndex) {
 function getPruebasData(targetId, authKey) {
   // CAPA DE SEGURIDAD
   if (authKey !== ADMIN_KEY) {
-    // Para depuración, relajar en caso de error y retornar log
-    // return { success: false, error: "ACCESO DENEGADO: Credenciales inválidas." };
+    return { success: false, error: "ACCESO DENEGADO: Credenciales inválidas." };
   }
 
   if (!targetId) {
