@@ -233,68 +233,61 @@ function getPruebasData(targetId, authKey) {
     
     // 5. EXTRAER DATOS DE DISC si se encontró
     if (discRowIndex !== -1) {
-      // Datos del candidato: Columnas 1 a 8 (A a H) → índices 0 a 7
-      // getRange(row, col, numRows, numCols) -> A es 1
-      const candidatoValues = sheetDisc.getRange(discRowIndex, 1, 1, 8).getValues()[0];
+      const lastCol = sheetDisc.getLastColumn();
+      const discRowValues = sheetDisc.getRange(discRowIndex, 1, 1, lastCol).getValues()[0];
       
       candidatoData = {
-        fecha: candidatoValues[0],       // Col A (1)
-        nombre: candidatoValues[2],      // Col C (3)
-        edad: candidatoValues[3],        // Col D (4)
-        genero: candidatoValues[4],      // Col E (5)
-        sede: candidatoValues[5],        // Col F (6)
-        cargo: candidatoValues[6],       // Col G (7)
-        estudios: candidatoValues[7]     // Col H (8)
+        fecha: discRowValues[0] || '',       // Col A (idx 0)
+        id: discRowValues[1] || targetId,    // Col B (idx 1) -> Se le pasa el targetId de respaldo
+        nombre: discRowValues[2] || '',      // Col C (idx 2)
+        edad: discRowValues[3] || '',        // Col D (idx 3)
+        genero: discRowValues[4] || '',      // Col E (idx 4)
+        sede: discRowValues[5] || '',        // Col F (idx 5)
+        cargo: discRowValues[6] || '',       // Col G (idx 6)
+        estudios: discRowValues[7] || ''     // Col H (idx 7)
       };
       
-      // Resultados DISC: Columnas 113 a 118 (DI a DN)
-      const discScores = sheetDisc.getRange(discRowIndex, 113, 1, 6).getValues()[0];
-      
       discData = {
-        D: discScores[0],               // DI (113)
-        I: discScores[1],               // DJ (114)
-        S: discScores[2],               // DK (115)
-        C: discScores[3],               // DL (116)
-        highestChar: discScores[4],     // DM (117)
-        interpretation: discScores[5]   // DN (118)
+        D: discRowValues[112] || 0,                 // DI (idx 112)
+        I: discRowValues[113] || 0,                 // DJ (idx 113)
+        S: discRowValues[114] || 0,                 // DK (idx 114)
+        C: discRowValues[115] || 0,                 // DL (idx 115)
+        highestChar: discRowValues[116] || '',      // DM (idx 116)
+        interpretation: discRowValues[117] || ''    // DN (idx 117)
       };
     }
     
     // 6. EXTRAER DATOS DE VALANTI si se encontró
     if (valantiRowIndex !== -1) {
+      const lastCol = sheetValanti.getLastColumn();
+      const valantiRowValues = sheetValanti.getRange(valantiRowIndex, 1, 1, lastCol).getValues()[0];
+
       // Si no se encontró en DISC, extraer datos del candidato de Valanti
       if (Object.keys(candidatoData).length === 0) {
-        const candidatoValues = sheetValanti.getRange(valantiRowIndex, 1, 1, 8).getValues()[0];
-        
         candidatoData = {
-          fecha: candidatoValues[0],       // Col A (1)
-          nombre: candidatoValues[2],
-          edad: candidatoValues[3],
-          genero: candidatoValues[4],
-          sede: candidatoValues[5],
-          cargo: candidatoValues[6],
-          estudios: candidatoValues[7]
+          fecha: valantiRowValues[0] || '',       // Col A
+          id: valantiRowValues[1] || targetId,    // Col B
+          nombre: valantiRowValues[2] || '',      // Col C
+          edad: valantiRowValues[3] || '',
+          genero: valantiRowValues[4] || '',
+          sede: valantiRowValues[5] || '',
+          cargo: valantiRowValues[6] || '',
+          estudios: valantiRowValues[7] || ''
         };
       }
       
-      // Resultados Valanti: Columnas 74 a 78 (BV a BZ)
-      const valantiScores = sheetValanti.getRange(valantiRowIndex, 74, 1, 5).getValues()[0];
-      
-      // Interpretaciones Valanti: Columnas 79 a 84 (CA a CF)
-      const valantiInterpretations = sheetValanti.getRange(valantiRowIndex, 79, 1, 6).getValues()[0];
-      
       valantiData = {
-        valor1: valantiScores[0],  // BV (74)
-        valor2: valantiScores[1],  // BW (75)
-        valor3: valantiScores[2],  // BX (76)
-        valor4: valantiScores[3],  // BY (77)
-        valor5: valantiScores[4],  // BZ (78)
-        highestChar: valantiInterpretations[0], // CA (79)
-        int1: valantiInterpretations[1],        // CB (80)
-        int2: valantiInterpretations[2],        // CC (81)
-        int3: valantiInterpretations[3],        // CD (82)
-        int4: valantiInterpretations[4],        // CE (83)
-        int5: valantiInterpretations[5]         // CF (84)
+        valor1: valantiRowValues[73] || 0,  // BV (idx 73)
+        valor2: valantiRowValues[74] || 0,  // BW (idx 74)
+        valor3: valantiRowValues[75] || 0,  // BX (idx 75)
+        valor4: valantiRowValues[76] || 0,  // BY (idx 76)
+        valor5: valantiRowValues[77] || 0,  // BZ (idx 77)
+        highestChar: valantiRowValues[78] || '', // CA (idx 78)
+        int1: valantiRowValues[79] || '',        // CB (idx 79)
+        int2: valantiRowValues[80] || '',        // CC (idx 80)
+        int3: valantiRowValues[81] || '',        // CD (idx 81)
+        int4: valantiRowValues[82] || '',        // CE (idx 82)
+        int5: valantiRowValues[83] || ''         // CF (idx 83)
       };
     }
     
