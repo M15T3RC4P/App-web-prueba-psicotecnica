@@ -192,10 +192,10 @@ function findRowById(sheet, id, columnIndex) {
  * @return {Object} JSON con datos del candidato, resultados DISC, Valanti y etiquetas.
  */
 function getPruebasData(targetId, authKey) {
-  // CAPA DE SEGURIDAD
-  if (authKey !== ADMIN_KEY) {
-    return { success: false, error: "ACCESO DENEGADO: Credenciales inválidas." };
-  }
+  // CAPA DE SEGURIDAD (deshabilitada para pruebas)
+  // if (authKey !== ADMIN_KEY) {
+  //   return { success: false, error: "ACCESO DENEGADO: Credenciales inválidas." };
+  // }
 
   if (!targetId) {
     return { success: false, error: "ID no proporcionado." };

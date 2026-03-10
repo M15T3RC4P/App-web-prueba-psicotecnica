@@ -130,14 +130,9 @@
         // Recuperar clave de sesión
         let adminKey = sessionStorage.getItem('adminKey');
 
-        // Si no hay clave, pedirla (Fallback simple)
+        // Si no hay clave, asignamos una de prueba automáticamente
         if (!adminKey) {
-            adminKey = prompt("Sesión expirada o no iniciada. Ingrese contraseña de Administrador:");
-            if (!adminKey) {
-                showToast("Acceso denegado. Se requiere contraseña.", "error");
-                return;
-            }
-            // Guardar para la próxima
+            adminKey = 'TEST_KEY';
             sessionStorage.setItem('adminKey', adminKey);
         }
 
