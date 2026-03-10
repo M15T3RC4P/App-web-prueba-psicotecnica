@@ -82,8 +82,10 @@
     }
 
     function clearDashboard() {
+        // En lugar de hacer que desaparezca el dashboard con 'hidden', simplemente lo vaciamos.
+        // Esto evita el bug donde el dashboard se evapora si no se encuentran datos del candidato.
         const reportContainer = document.getElementById('reportContainer');
-        if (reportContainer) reportContainer.classList.add('hidden');
+        if (reportContainer) reportContainer.classList.remove('hidden');
 
         const textFields = ['candName', 'candRole', 'candSede', 'candId', 'candAge', 'candGender', 'candEdu', 'candDate', 'discHighestChar', 'discFullInterpretation', 'valantiHighest'];
         textFields.forEach(id => {
@@ -127,14 +129,8 @@
             return;
         }
 
-        // Recuperar clave de sesión
-        let adminKey = sessionStorage.getItem('adminKey');
-
-        // Si no hay clave, asignamos una de prueba automáticamente
-        if (!adminKey) {
-            adminKey = 'TEST_KEY';
-            sessionStorage.setItem('adminKey', adminKey);
-        }
+        // Usamos una llave de prueba constante ya que se removió la capa de seguridad.
+        const adminKey = 'TEST_KEY';
 
         // LIMPIAR DASHBOARD ANTES DE BUSCAR
         clearDashboard();
@@ -158,13 +154,10 @@
 
         if (!response.success) {
             showToast(response.error || "No se encontraron datos", "error");
-            if (response.error && response.error.includes("ACCESO DENEGADO")) {
-                sessionStorage.removeItem('adminKey');
-            }
             return;
         }
 
-        // Mostrar el contenedor de reporte (por seguridad)
+        // Nos aseguramos que el contenedor de reporte esté visible
         const reportContainer = document.getElementById('reportContainer');
         if (reportContainer) reportContainer.classList.remove('hidden');
 
@@ -212,10 +205,7 @@
 
     // Navegación Segura a Inicio
     function goToHome() {
-        // 1. Limpiar sesión de administrador
-        sessionStorage.removeItem('adminKey');
-
-        // 2. Obtener URL limpia y redirigir
+        // Redirigir al home general de la plataforma
         google.script.run.withSuccessHandler(url => {
             window.top.location.href = url;
         }).getScriptUrl();
@@ -315,7 +305,9 @@
         if (!tbody) return;
 
         tbody.innerHTML = '';
-        labels = labels || ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+        if (!labels || !labels[0]) {
+            labels = ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+        }
 
         labels.forEach((label, index) => {
             const score = scores[index];
@@ -335,7 +327,9 @@
         if (valantiChartInstance) valantiChartInstance.destroy();
 
         const scores = [valanti.valor1, valanti.valor2, valanti.valor3, valanti.valor4, valanti.valor5];
-        labels = labels || ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+        if (!labels || !labels[0]) {
+            labels = ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+        }
 
         valantiChartInstance = new Chart(ctx, {
             type: 'radar',
@@ -379,7 +373,9 @@
         if (!grid) return;
 
         const interpretations = [valanti.int1, valanti.int2, valanti.int3, valanti.int4, valanti.int5];
-        labels = labels || ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+        if (!labels || !labels[0]) {
+            labels = ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
+        }
 
         grid.innerHTML = '';
         labels.forEach((label, index) => {

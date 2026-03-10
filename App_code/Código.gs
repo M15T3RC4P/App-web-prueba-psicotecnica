@@ -11,14 +11,7 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
   
-  // Nueva ruta para consultas
-  if (e.parameter && e.parameter.view === 'consultas') {
-    return HtmlService.createTemplateFromFile('Consultas')
-      .evaluate()
-      .setTitle('Consulta de Resultados')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
+
 
   return HtmlService.createTemplateFromFile('index')
     .evaluate()
@@ -35,13 +28,7 @@ function getScriptUrl() {
   return ScriptApp.getService().getUrl();
 }
 
-/**
- * Validar credenciales de administrador desde el servidor
- * Evita exponer la contraseña en el código cliente.
- */
-function verifyAdminAccess(password) {
-  return password === ADMIN_KEY;
-}
+
 
 /**
  * ESTA ES LA SOLUCIÓN:
@@ -172,7 +159,10 @@ function findRowById(sheet, id, columnIndex) {
   
   const targetId = String(id).trim().toLowerCase();
   
-  for (let i = 0; i < values.length; i++) {
+  // OPTIMIZACIÓN Y EFICIENCIA: Iterar de abajo hacia arriba (reversa)
+  // Esto asegura que si el candidato hizo la prueba múltiples veces,
+  // obtendremos el último registro (el más reciente).
+  for (let i = values.length - 1; i >= 0; i--) {
     const cellValue = String(values[i][0]).trim().toLowerCase();
     if (cellValue === targetId) {
       // +2: porque iteramos un array que empieza en 0, pero leimos desde fila 2
@@ -192,10 +182,6 @@ function findRowById(sheet, id, columnIndex) {
  * @return {Object} JSON con datos del candidato, resultados DISC, Valanti y etiquetas.
  */
 function getPruebasData(targetId, authKey) {
-  // CAPA DE SEGURIDAD (deshabilitada para pruebas)
-  // if (authKey !== ADMIN_KEY) {
-  //   return { success: false, error: "ACCESO DENEGADO: Credenciales inválidas." };
-  // }
 
   if (!targetId) {
     return { success: false, error: "ID no proporcionado." };

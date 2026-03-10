@@ -1,41 +1,4 @@
-<script>
-    // --- ADMIN ACCESS LOGIC (SECURE) ---
-    function openAdminModal() {
-        // Redirigir directamente al dashboard para pruebas omitiendo la capa de seguridad
-        google.script.run.withSuccessHandler(url => {
-            window.open(url + '?view=dashboard', '_top');
-        }).getScriptUrl();
-    }
-
-    function closeAdminModal() {
-        document.getElementById('admin-modal').classList.add('hidden');
-        document.getElementById('adminPass').value = '';
-    }
-
-    function verifyAdmin() {
-        const pass = document.getElementById('adminPass').value;
-
-        // Llamada al servidor para validar hash/pass
-        google.script.run
-            .withSuccessHandler(isValid => {
-                if (isValid) {
-                    // Guardar en sesión para usarlo en el dashboard
-                    sessionStorage.setItem('adminKey', pass);
-
-                    // Redirigir
-                    google.script.run.withSuccessHandler(url => {
-                        window.open(url + '?view=dashboard', '_top');
-                    }).getScriptUrl();
-                } else {
-                    alert("Contraseña incorrecta");
-                    document.getElementById('adminPass').value = '';
-                    document.getElementById('adminPass').focus();
-                }
-            })
-            .verifyAdminAccess(pass);
-    }
-</script>
-
+<!-- Lógica principal de la aplicación -->
 <script>
     let appData = {
         user: {},
