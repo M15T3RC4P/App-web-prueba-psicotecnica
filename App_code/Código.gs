@@ -174,14 +174,14 @@ function findRowById(sheet, id, columnIndex) {
 }
 
 /**
- * Nueva función: Busca un ID en las hojas DISC y Valanti, extrae datos específicos
+ * Busca un ID en las hojas DISC y Valanti, extrae datos específicos
  * y retorna un objeto JSON unificado con toda la información.
- * SEGURIDAD: Requiere password de admin para funcionar.
+ * NOTA: Los valores numéricos (D, I, S, C / valor1-5) serán null si las fórmulas
+ * de cálculo en el Sheet no han sido extendidas hasta la fila del candidato.
  * @param {string} targetId - ID del candidato a buscar (Columna B en ambas hojas).
- * @param {string} authKey - Clave de administrador para autorizar la lectura.
  * @return {Object} JSON con datos del candidato, resultados DISC, Valanti y etiquetas.
  */
-function getPruebasData(targetId, authKey) {
+function getPruebasData(targetId) {
 
   if (!targetId) {
     return { success: false, error: "ID no proporcionado." };
@@ -218,12 +218,16 @@ function getPruebasData(targetId, authKey) {
     
     // 5. EXTRAER DATOS DE DISC si se encontró
     if (discRowIndex !== -1) {
-      const lastCol = sheetDisc.getLastColumn();
-      const discRowValues = sheetDisc.getRange(discRowIndex, 1, 1, lastCol).getValues()[0];
+      // IMPORTANTE: Usamos 118 fijo (columnas A hasta DN) en lugar de getLastColumn().
+      // getLastColumn() puede devolver un número menor si la fila específica del candidato
+      // no tiene fórmulas extendidas en las columnas de resultados (DI:DN), lo cual hace
+      // que el array de valores no alcance esos índices y devuelva undefined (→ 0 silencioso).
+      const DISC_TOTAL_COLS = 118; // A(1) hasta DN(118)
+      const discRowValues = sheetDisc.getRange(discRowIndex, 1, 1, DISC_TOTAL_COLS).getValues()[0];
       
       candidatoData = {
         fecha: discRowValues[0] || '',       // Col A (idx 0)
-        id: discRowValues[1] || targetId,    // Col B (idx 1) -> Se le pasa el targetId de respaldo
+        id: discRowValues[1] || targetId,    // Col B (idx 1)
         nombre: discRowValues[2] || '',      // Col C (idx 2)
         edad: discRowValues[3] || '',        // Col D (idx 3)
         genero: discRowValues[4] || '',      // Col E (idx 4)
@@ -231,48 +235,69 @@ function getPruebasData(targetId, authKey) {
         cargo: discRowValues[6] || '',       // Col G (idx 6)
         estudios: discRowValues[7] || ''     // Col H (idx 7)
       };
-      
-      discData = {
-        D: discRowValues[112] || 0,                 // DI (idx 112)
-        I: discRowValues[113] || 0,                 // DJ (idx 113)
-        S: discRowValues[114] || 0,                 // DK (idx 114)
-        C: discRowValues[115] || 0,                 // DL (idx 115)
-        highestChar: discRowValues[116] || '',      // DM (idx 116)
-        interpretation: discRowValues[117] || ''    // DN (idx 117)
+
+      // Verificar si las celdas de resultados tienen datos (fórmulas extendidas en el Sheet)
+      const dRaw = discRowValues[112]; // Col DI: suma_a_dominante
+      const iRaw = discRowValues[113]; // Col DJ: suma_b_influyente
+      const sRaw = discRowValues[114]; // Col DK: suma_c_estable
+      const cRaw = discRowValues[115]; // Col DL: suma_d_minucioso
+
+      // Si TODOS los puntajes son 0 o vacío, significa que las fórmulas no están extendidas
+      const sinResultadosDisc = [dRaw, iRaw, sRaw, cRaw].every(v => v === '' || v === null || v === undefined || Number(v) === 0);
+
+      discData = sinResultadosDisc ? null : {
+        D: Number(dRaw) || 0,
+        I: Number(iRaw) || 0,
+        S: Number(sRaw) || 0,
+        C: Number(cRaw) || 0,
+        highestChar: discRowValues[116] || '',     // Col DM: caracteristica_mas_alta
+        interpretation: discRowValues[117] || ''   // Col DN: interpretacion_mas_alta
       };
     }
     
     // 6. EXTRAER DATOS DE VALANTI si se encontró
     if (valantiRowIndex !== -1) {
-      const lastCol = sheetValanti.getLastColumn();
-      const valantiRowValues = sheetValanti.getRange(valantiRowIndex, 1, 1, lastCol).getValues()[0];
+      // IMPORTANTE: Usamos 84 fijo (columnas A hasta CF) en lugar de getLastColumn().
+      // Misma razón que DISC: getLastColumn() puede no alcanzar las columnas de resultados
+      // (BV:CF) si la fila del candidato no tiene fórmulas extendidas en esas columnas.
+      const VALANTI_TOTAL_COLS = 84; // A(1) hasta CF(84)
+      const valantiRowValues = sheetValanti.getRange(valantiRowIndex, 1, 1, VALANTI_TOTAL_COLS).getValues()[0];
 
-      // Si no se encontró en DISC, extraer datos del candidato de Valanti
-      if (Object.keys(candidatoData).length === 0) {
+      // Si no se encontró el candidato en DISC (solo hizo Valanti) o está incompleto, extraer datos de aquí
+      if (!candidatoData.nombre && !candidatoData.genero) {
         candidatoData = {
           fecha: valantiRowValues[0] || '',       // Col A
           id: valantiRowValues[1] || targetId,    // Col B
           nombre: valantiRowValues[2] || '',      // Col C
-          edad: valantiRowValues[3] || '',
-          genero: valantiRowValues[4] || '',
-          sede: valantiRowValues[5] || '',
-          cargo: valantiRowValues[6] || '',
-          estudios: valantiRowValues[7] || ''
+          edad: valantiRowValues[3] || '',        // Col D
+          genero: valantiRowValues[4] || '',      // Col E
+          sede: valantiRowValues[5] || '',        // Col F
+          cargo: valantiRowValues[6] || '',       // Col G
+          estudios: valantiRowValues[7] || ''     // Col H
         };
       }
-      
-      valantiData = {
-        valor1: valantiRowValues[73] || 0,  // BV (idx 73)
-        valor2: valantiRowValues[74] || 0,  // BW (idx 74)
-        valor3: valantiRowValues[75] || 0,  // BX (idx 75)
-        valor4: valantiRowValues[76] || 0,  // BY (idx 76)
-        valor5: valantiRowValues[77] || 0,  // BZ (idx 77)
-        highestChar: valantiRowValues[78] || '', // CA (idx 78)
-        int1: valantiRowValues[79] || '',        // CB (idx 79)
-        int2: valantiRowValues[80] || '',        // CC (idx 80)
-        int3: valantiRowValues[81] || '',        // CD (idx 81)
-        int4: valantiRowValues[82] || '',        // CE (idx 82)
-        int5: valantiRowValues[83] || ''         // CF (idx 83)
+
+      // Verificar si las celdas de resultados tienen datos (fórmulas extendidas en el Sheet)
+      const v1Raw = valantiRowValues[73]; // Col BV: verdad_normalizado
+      const v2Raw = valantiRowValues[74]; // Col BW: rectitud_normalizado
+      const v3Raw = valantiRowValues[75]; // Col BX: paz_normalizado
+      const v4Raw = valantiRowValues[76]; // Col BY: amor_normalizado
+      const v5Raw = valantiRowValues[77]; // Col BZ: noviolencia_normalizado
+
+      const sinResultadosValanti = [v1Raw, v2Raw, v3Raw, v4Raw, v5Raw].every(v => v === '' || v === null || v === undefined || Number(v) === 0);
+
+      valantiData = sinResultadosValanti ? null : {
+        valor1: Number(v1Raw) || 0,
+        valor2: Number(v2Raw) || 0,
+        valor3: Number(v3Raw) || 0,
+        valor4: Number(v4Raw) || 0,
+        valor5: Number(v5Raw) || 0,
+        highestChar: valantiRowValues[78] || '', // Col CA: valor_mas_alto
+        int1: valantiRowValues[79] || '',        // Col CB: interpretacion_verdad
+        int2: valantiRowValues[80] || '',        // Col CC: interpretacion_rectitud
+        int3: valantiRowValues[81] || '',        // Col CD: interpretacion_paz
+        int4: valantiRowValues[82] || '',        // Col CE: interpretacion_amor
+        int5: valantiRowValues[83] || ''         // Col CF: interpretacion_noviolencia
       };
     }
     

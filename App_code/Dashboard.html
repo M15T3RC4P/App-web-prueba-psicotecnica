@@ -254,7 +254,7 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
                 <table class="report-table">
                     <thead>
                         <tr>
@@ -267,12 +267,11 @@
                         <!-- Inyectado por JS -->
                     </tbody>
                 </table>
-            </div>
 
-            <!-- Gráfico -->
-            <div class="chart-container-print">
-                <canvas id="discChart"></canvas>
-            </div>
+                <!-- Gráfico (dentro del mismo grid, columna derecha) -->
+                <div class="chart-container-print">
+                    <canvas id="discChart"></canvas>
+                </div>
             </div>
 
             <!-- Nuevo Bloque Interpretación DISC -->

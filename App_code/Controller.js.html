@@ -129,28 +129,29 @@
             return;
         }
 
-        // Usamos una llave de prueba constante ya que se removió la capa de seguridad.
-        const adminKey = 'TEST_KEY';
 
         // LIMPIAR DASHBOARD ANTES DE BUSCAR
         clearDashboard();
 
         // UI Loading
-        const spinner = document.getElementById('loadingSpinner') || document.getElementById('loadingIndicator');
-        if (spinner) spinner.classList.remove('hidden');
-        if (spinner) spinner.style.display = 'flex'; // Asegurar visibilidad y centrado
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) {
+            spinner.style.display = 'flex'; // Mostrar spinner por estilo directo (evita conflicto con Tailwind 'hidden')
+        }
 
-        // LLAMADA AL BACKEND CON CLAVE DE SEGURIDAD
+        // LLAMADA AL BACKEND
         google.script.run
             .withSuccessHandler(handleSuccess)
             .withFailureHandler(handleError)
-            .getPruebasData(id, adminKey);
+            .getPruebasData(id);
     }
 
     function handleSuccess(response) {
-        const spinner = document.getElementById('loadingSpinner') || document.getElementById('loadingIndicator');
-        if (spinner) spinner.classList.add('hidden');
+        const spinner = document.getElementById('loadingSpinner');
         if (spinner) spinner.style.display = 'none';
+
+        // Log de depuración (visible en la consola del navegador con F12)
+        console.log('[Dashboard] Respuesta del backend:', JSON.stringify(response, null, 2));
 
         if (!response.success) {
             showToast(response.error || "No se encontraron datos", "error");
@@ -167,7 +168,9 @@
 
         renderCandidateInfo(candidato);
 
-        if (disc && Object.keys(disc).length > 0 && disc.D !== undefined) {
+        // Renderizado Condicional DISC
+        // Solo requiere que 'disc' exista y que 'D' no sea estrictamente undefined
+        if (disc && disc.D !== undefined && disc.D !== null) {
             renderDiscTable(disc);
             renderDiscChart(disc);
             setText('discHighestChar', disc.highestChar);
@@ -179,7 +182,8 @@
             setText('discFullInterpretation', 'El candidato no presenta resultados en esta prueba.');
         }
 
-        if (valanti && Object.keys(valanti).length > 0 && valanti.valor1 !== undefined) {
+        // Renderizado Condicional Valanti
+        if (valanti && valanti.valor1 !== undefined && valanti.valor1 !== null) {
             renderValantiTable(valanti, etiquetasValanti);
             renderValantiChart(valanti, etiquetasValanti);
 
