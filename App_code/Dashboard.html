@@ -113,11 +113,18 @@
         }
 
         /* Ajustes de Impresión Real */
+        @page {
+            /* AJUSTE 4: Márgenes reducidos A4 portrait */
+            size: A4 portrait;
+            margin: 8mm 10mm 18mm 10mm; /* top right bottom left — bottom extra para footer fijo */
+        }
+
         @media print {
             body {
                 background: white !important;
                 margin: 0;
                 padding: 0;
+                padding-bottom: 40px; /* Espacio para que el footer fijo no tape el contenido */
             }
 
             .print-container {
@@ -126,21 +133,63 @@
                 border: none;
                 width: 100%;
                 max-width: none;
+                min-height: auto;
             }
 
-            .no-print {
+            /* AJUSTE 5: Ocultar navegación y elementos no imprimibles */
+            .no-print,
+            nav {
                 display: none !important;
             }
 
-            .report-header {
+            /* AJUSTE 5: Mantener colores corporativos en impresión */
+            .report-header,
+            .pill-red,
+            .pill-teal,
+            .report-footer {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
 
-            .pill-red,
-            .pill-teal {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            /* AJUSTE 2: Evitar corte de contenido entre páginas */
+            .report-section {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .chart-container-print {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .report-table {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* Tarjetas de interpretación Valanti */
+            #valantiInterpretationsGrid > div {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* Bloque de interpretación DISC */
+            #discHighestChar,
+            #discFullInterpretation {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* AJUSTE 3: Footer fijo al margen inferior de la hoja */
+            .report-footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                border-top: 1px solid #e2e8f0;
+                background-color: #f8fafc;
+                padding: 0.5rem 1rem 4mm 1rem; /* 4mm de padding inferior = alineado al margen @page */
+                font-size: 0.7rem;
             }
         }
     </style>
@@ -193,8 +242,9 @@
         <!-- ENCABEZADO -->
         <header class="report-header">
             <div>
-                <h1 style="margin: 0; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0 em;">Informe
-                    selección de talento humano</h1>
+                <h1
+                    style="margin: 0; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 0 em; font-weight: 700">
+                    Informe selección de talento humano</h1>
                 <p style="margin: 0.25rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">Resultados de Evaluación Psicotécnica
                 </p>
             </div>
@@ -210,7 +260,8 @@
         <section class="report-section" style="background-color: #f8fafc;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                    <h2 id="candName" style="margin: 0 0 0.5rem 0; font-size: 1.75rem; color: #1e293b;">Nombre Candidato
+                    <h2 id="candName" style="margin: 0 0 0.5rem 0; font-size: 1.75rem; color: #1e293b;font-weight:700">
+                        Nombre Candidato
                     </h2>
                     <div style="display: flex; gap: 1rem; color: #64748b; font-weight: 500;">
                         <span id="candRole" style="color: var(--primary-color); font-weight: 700;">Cargo</span>
@@ -336,8 +387,11 @@
                 <!-- Grilla de tarjetas para interpretaciones -->
                 <h5 style="color: #64748b; font-size: 0.95rem; margin-bottom: 1rem; margin-top: 0;">Análisis por Valor:
                 </h5>
+                <!-- AJUSTE 1: grid 2 columnas fijas. La 5ª tarjeta (No Violencia)
+                     queda sola en su fila y se centra con justify-items + margin auto
+                     aplicado desde Controller.js.html en el último hijo generado. -->
                 <div id="valantiInterpretationsGrid"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; justify-items: stretch;">
                     <!-- Inyectado por JS -->
                 </div>
             </div>
@@ -346,7 +400,8 @@
         <!-- FOOTER -->
         <footer class="report-footer">
             <p style="margin: 0;">Reporte generado automáticamente por la Plataforma de Evaluación.</p>
-            <p style="margin: 0.25rem 0 0 0;">&copy; <span id="currentYear"></span> Departamento de Gestión Humana.</p>
+            <p style="margin: 0.25rem 0 0 0;">&copy; <span id="currentYear"></span> Proceso de Selección de Talento
+                Humano.</p>
         </footer>
 
     </main>

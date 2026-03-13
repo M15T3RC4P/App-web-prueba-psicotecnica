@@ -141,45 +141,19 @@ function saveTestResults(testType, userData, answers) {
   }
 }
 
-/**
- * Helper robusto y optimizado para buscar ID.
- * OPTIMIZACIÓN: Solo carga la columna de interés para evitar latencia en bases datos grandes.
- */
-function findRowById(sheet, id, columnIndex) {
-  // columnIndex es 0-based. Columna A=0, B=1.
-  // getRange(row, col, numRows, numCols). 
-  // Empezamos en fila 2 para saltar cabecera.
-  
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return -1; // Hoja vacía
 
-  // Leer SOLAMENTE la columna de IDs
-  const range = sheet.getRange(2, columnIndex + 1, lastRow - 1, 1);
-  const values = range.getValues(); // Array de Arrays [[val1], [val2]...]
-  
-  const targetId = String(id).trim().toLowerCase();
-  
-  // OPTIMIZACIÓN Y EFICIENCIA: Iterar de abajo hacia arriba (reversa)
-  // Esto asegura que si el candidato hizo la prueba múltiples veces,
-  // obtendremos el último registro (el más reciente).
-  for (let i = values.length - 1; i >= 0; i--) {
-    const cellValue = String(values[i][0]).trim().toLowerCase();
-    if (cellValue === targetId) {
-      // +2: porque iteramos un array que empieza en 0, pero leimos desde fila 2
-      // Si i=0, es la fila 2.
-      return i + 2; 
-    }
-  }
-  return -1;
-}
 
 /**
- * Busca un ID en las hojas DISC y Valanti, extrae datos específicos
- * y retorna un objeto JSON unificado con toda la información.
- * NOTA: Los valores numéricos (D, I, S, C / valor1-5) serán null si las fórmulas
- * de cálculo en el Sheet no han sido extendidas hasta la fila del candidato.
- * @param {string} targetId - ID del candidato a buscar (Columna B en ambas hojas).
- * @return {Object} JSON con datos del candidato, resultados DISC, Valanti y etiquetas.
+ * Lee la hoja unificada 'Resultado' (columnas A:Y) y retorna los datos
+ * del candidato cuyo ID coincide con targetId (búsqueda inversa = registro más reciente).
+ *
+ * Estructura de columnas (0-based):
+ *  0=fecha, 1=ID, 2=nombre, 3=edad, 4=genero, 5=sede, 6=cargo, 7=nivel_estudio
+ *  8=D(dominante), 9=I(influyente), 10=S(estable), 11=C(minucioso),
+ *  12=caracteristica_mas_alta, 13=interpretacion_mas_alta
+ *  14=verdad, 15=rectitud, 16=paz, 17=amor, 18=noviolencia,
+ *  19=valor_mas_alto, 20=interp_verdad, 21=interp_rectitud, 22=interp_paz,
+ *  23=interp_amor, 24=interp_noviolencia
  */
 function getPruebasData(targetId) {
 
@@ -189,135 +163,147 @@ function getPruebasData(targetId) {
 
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    
-    // 1. Obtener hojas
-    const sheetDisc = ss.getSheetByName('DISC');
-    const sheetValanti = ss.getSheetByName('Valanti');
-    const sheetDatos = ss.getSheetByName('Datos');
-    
-    if (!sheetDisc) return { success: false, error: "Hoja 'DISC' no encontrada." };
-    if (!sheetValanti) return { success: false, error: "Hoja 'Valanti' no encontrada." };
-    if (!sheetDatos) return { success: false, error: "Hoja 'Datos' no encontrada." };
-    
-    // 2. Buscar el targetId en columna B (índice 1) de ambas hojas
-    const discRowIndex = findRowById(sheetDisc, targetId, 1);
-    const valantiRowIndex = findRowById(sheetValanti, targetId, 1);
-    
-    // 3. Validar que se encontró en al menos una hoja
-    if (discRowIndex === -1 && valantiRowIndex === -1) {
-      return { 
-        success: false, 
-        error: `No se encontró el ID "${targetId}" en ninguna de las hojas (DISC o Valanti).` 
-      };
+    const sheet = ss.getSheetByName('Resultado');
+
+    if (!sheet) {
+      return { success: false, error: "Hoja 'Resultado' no encontrada en el Spreadsheet." };
     }
-    
-    // 4. Preparar objeto de respuesta
-    let candidatoData = {};
-    let discData = null;
-    let valantiData = null;
-    
-    // 5. EXTRAER DATOS DE DISC si se encontró
-    if (discRowIndex !== -1) {
-      // IMPORTANTE: Usamos 118 fijo (columnas A hasta DN) en lugar de getLastColumn().
-      // getLastColumn() puede devolver un número menor si la fila específica del candidato
-      // no tiene fórmulas extendidas en las columnas de resultados (DI:DN), lo cual hace
-      // que el array de valores no alcance esos índices y devuelva undefined (→ 0 silencioso).
-      const DISC_TOTAL_COLS = 118; // A(1) hasta DN(118)
-      const discRowValues = sheetDisc.getRange(discRowIndex, 1, 1, DISC_TOTAL_COLS).getValues()[0];
-      
-      candidatoData = {
-        fecha: discRowValues[0] || '',       // Col A (idx 0)
-        id: discRowValues[1] || targetId,    // Col B (idx 1)
-        nombre: discRowValues[2] || '',      // Col C (idx 2)
-        edad: discRowValues[3] || '',        // Col D (idx 3)
-        genero: discRowValues[4] || '',      // Col E (idx 4)
-        sede: discRowValues[5] || '',        // Col F (idx 5)
-        cargo: discRowValues[6] || '',       // Col G (idx 6)
-        estudios: discRowValues[7] || ''     // Col H (idx 7)
-      };
 
-      // Verificar si las celdas de resultados tienen datos (fórmulas extendidas en el Sheet)
-      const dRaw = discRowValues[112]; // Col DI: suma_a_dominante
-      const iRaw = discRowValues[113]; // Col DJ: suma_b_influyente
-      const sRaw = discRowValues[114]; // Col DK: suma_c_estable
-      const cRaw = discRowValues[115]; // Col DL: suma_d_minucioso
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    Logger.log('[getPruebasData] Buscando ID: "%s" | Filas totales: %s | Columnas totales: %s', targetId, lastRow, lastCol);
 
-      // Si TODOS los puntajes son 0 o vacío, significa que las fórmulas no están extendidas
-      const sinResultadosDisc = [dRaw, iRaw, sRaw, cRaw].every(v => v === '' || v === null || v === undefined || Number(v) === 0);
-
-      discData = sinResultadosDisc ? null : {
-        D: Number(dRaw) || 0,
-        I: Number(iRaw) || 0,
-        S: Number(sRaw) || 0,
-        C: Number(cRaw) || 0,
-        highestChar: discRowValues[116] || '',     // Col DM: caracteristica_mas_alta
-        interpretation: discRowValues[117] || ''   // Col DN: interpretacion_mas_alta
-      };
+    if (lastRow < 2) {
+      return { success: false, error: "La hoja 'Resultado' no contiene datos." };
     }
-    
-    // 6. EXTRAER DATOS DE VALANTI si se encontró
-    if (valantiRowIndex !== -1) {
-      // IMPORTANTE: Usamos 84 fijo (columnas A hasta CF) en lugar de getLastColumn().
-      // Misma razón que DISC: getLastColumn() puede no alcanzar las columnas de resultados
-      // (BV:CF) si la fila del candidato no tiene fórmulas extendidas en esas columnas.
-      const VALANTI_TOTAL_COLS = 84; // A(1) hasta CF(84)
-      const valantiRowValues = sheetValanti.getRange(valantiRowIndex, 1, 1, VALANTI_TOTAL_COLS).getValues()[0];
 
-      // Si no se encontró el candidato en DISC (solo hizo Valanti) o está incompleto, extraer datos de aquí
-      if (!candidatoData.nombre && !candidatoData.genero) {
-        candidatoData = {
-          fecha: valantiRowValues[0] || '',       // Col A
-          id: valantiRowValues[1] || targetId,    // Col B
-          nombre: valantiRowValues[2] || '',      // Col C
-          edad: valantiRowValues[3] || '',        // Col D
-          genero: valantiRowValues[4] || '',      // Col E
-          sede: valantiRowValues[5] || '',        // Col F
-          cargo: valantiRowValues[6] || '',       // Col G
-          estudios: valantiRowValues[7] || ''     // Col H
-        };
+    // Leer todas las filas de datos: A2 hasta la columna 25 (Y) fija.
+    // Se usa 25 fijo para garantizar que el rango alcanza Y incluso si
+    // getLastColumn() devuelve un número menor por columnas sin datos en esa fila.
+    const numCols = Math.max(lastCol, 25);
+    const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+    const targetStr = String(targetId).trim();
+
+    // Búsqueda inversa: último registro primero.
+    // Logger en el loop SOLO en caso de no encontrar (no por fila, evita timeout)
+    let row = null;
+    let foundIndex = -1;
+    for (let i = data.length - 1; i >= 0; i--) {
+      const cellId = String(data[i][1]).trim();
+      if (cellId === targetStr) {
+        row = data[i];
+        foundIndex = i + 2;
+        break;
       }
+    }
 
-      // Verificar si las celdas de resultados tienen datos (fórmulas extendidas en el Sheet)
-      const v1Raw = valantiRowValues[73]; // Col BV: verdad_normalizado
-      const v2Raw = valantiRowValues[74]; // Col BW: rectitud_normalizado
-      const v3Raw = valantiRowValues[75]; // Col BX: paz_normalizado
-      const v4Raw = valantiRowValues[76]; // Col BY: amor_normalizado
-      const v5Raw = valantiRowValues[77]; // Col BZ: noviolencia_normalizado
-
-      const sinResultadosValanti = [v1Raw, v2Raw, v3Raw, v4Raw, v5Raw].every(v => v === '' || v === null || v === undefined || Number(v) === 0);
-
-      valantiData = sinResultadosValanti ? null : {
-        valor1: Number(v1Raw) || 0,
-        valor2: Number(v2Raw) || 0,
-        valor3: Number(v3Raw) || 0,
-        valor4: Number(v4Raw) || 0,
-        valor5: Number(v5Raw) || 0,
-        highestChar: valantiRowValues[78] || '', // Col CA: valor_mas_alto
-        int1: valantiRowValues[79] || '',        // Col CB: interpretacion_verdad
-        int2: valantiRowValues[80] || '',        // Col CC: interpretacion_rectitud
-        int3: valantiRowValues[81] || '',        // Col CD: interpretacion_paz
-        int4: valantiRowValues[82] || '',        // Col CE: interpretacion_amor
-        int5: valantiRowValues[83] || ''         // Col CF: interpretacion_noviolencia
+    if (!row) {
+      Logger.log('[getPruebasData] ID "%s" NO encontrado. Total filas escaneadas: %s', targetId, data.length);
+      // Muestra las primeras 5 IDs para ayudar al diagnóstico
+      const muestra = data.slice(0, 5).map(r => String(r[1])).join(', ');
+      Logger.log('[getPruebasData] Primeros IDs en la hoja: %s', muestra);
+      return {
+        success: false,
+        error: `No se encontraron resultados para el ID "${targetId}". Verifique que el candidato haya completado alguna prueba.`
       };
     }
-    
-    // 7. EXTRAER ETIQUETAS DE LA HOJA 'Datos' (O2:O6)
-    const etiquetasRange = sheetDatos.getRange('O2:O6').getValues();
-    const etiquetas = etiquetasRange.map(row => row[0]); // Convertir array 2D a 1D
-    
-    // 8. Retornar objeto JSON unificado
-    return {
-      success: true,
-      candidato: candidatoData,
-      disc: discData,
-      valanti: valantiData,
-      etiquetasValanti: etiquetas  // [Verdad, Rectitud, Paz, Amor, No violencia]
+
+    Logger.log('[getPruebasData] ID "%s" encontrado en fila %s.', targetId, foundIndex);
+    Logger.log('[getPruebasData] Columnas I-N (DISC): [%s, %s, %s, %s, %s, %s]', row[8], row[9], row[10], row[11], row[12], row[13]);
+    Logger.log('[getPruebasData] Columnas O-S (Valanti): [%s, %s, %s, %s, %s]', row[14], row[15], row[16], row[17], row[18]);
+
+    // --- DATOS DEL CANDIDATO (A-H) ---
+    // CRÍTICO: row[0] es un objeto Date de GAS. DEBE convertirse a String
+    // antes de retornar, o google.script.run no puede serializarlo → response=null.
+    let fechaStr = '';
+    try {
+      if (row[0] && row[0] instanceof Date) {
+        fechaStr = row[0].toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+      } else if (row[0]) {
+        fechaStr = String(row[0]);
+      }
+    } catch(e) { fechaStr = ''; }
+
+    const candidato = {
+      fecha:    fechaStr,
+      id:       String(row[1] || targetId),
+      nombre:   String(row[2] || ''),
+      edad:     String(row[3] || ''),
+      genero:   String(row[4] || ''),
+      sede:     String(row[5] || ''),
+      cargo:    String(row[6] || ''),
+      estudios: String(row[7] || '')
     };
-    
+
+    // --- DISC (I-N, índices 8-13) ---
+    // CORRECCIÓN: No incluir Number(v)===0 como condición de "sin datos".
+    // Un puntaje de 0 es un valor VÁLIDO en DISC. Solo verificar vacío/null/undefined.
+    const dRaw = row[8];  // suma_a_dominante
+    const iRaw = row[9];  // suma_b_influyente
+    const sRaw = row[10]; // suma_c_estable
+    const cRaw = row[11]; // suma_d_minucioso
+
+    const sinDisc = [dRaw, iRaw, sRaw, cRaw]
+      .every(v => v === '' || v === null || v === undefined);
+
+    Logger.log('[getPruebasData] sinDisc=%s, valores=[%s,%s,%s,%s]', sinDisc, dRaw, iRaw, sRaw, cRaw);
+
+    const disc = sinDisc ? null : {
+      D: parseFloat(dRaw) || 0,
+      I: parseFloat(iRaw) || 0,
+      S: parseFloat(sRaw) || 0,
+      C: parseFloat(cRaw) || 0,
+      highestChar:    String(row[12] || ''), // caracteristica_mas_alta
+      interpretation: String(row[13] || '')  // interpretacion_mas_alta
+    };
+
+    // --- VALANTI (O-Y, índices 14-24) ---
+    // CORRECCIÓN: No incluir Number(v)===0 como condición de "sin datos".
+    // Un valor normalizado de 0 es técnicamente posible. Solo verificar vacío/null/undefined.
+    const v1 = row[14]; // verdad_normalizado
+    const v2 = row[15]; // rectitud_normalizado
+    const v3 = row[16]; // paz_normalizado
+    const v4 = row[17]; // amor_normalizado
+    const v5 = row[18]; // noviolencia_normalizado
+
+    const sinValanti = [v1, v2, v3, v4, v5]
+      .every(v => v === '' || v === null || v === undefined);
+
+    Logger.log('[getPruebasData] sinValanti=%s, valores=[%s,%s,%s,%s,%s]', sinValanti, v1, v2, v3, v4, v5);
+
+    const valanti = sinValanti ? null : {
+      valor1: parseFloat(v1) || 0,
+      valor2: parseFloat(v2) || 0,
+      valor3: parseFloat(v3) || 0,
+      valor4: parseFloat(v4) || 0,
+      valor5: parseFloat(v5) || 0,
+      highestChar: String(row[19] || ''), // valor_mas_alto
+      int1: String(row[20] || ''),        // interpretacion_verdad
+      int2: String(row[21] || ''),        // interpretacion_rectitud
+      int3: String(row[22] || ''),        // interpretacion_paz
+      int4: String(row[23] || ''),        // interpretacion_amor
+      int5: String(row[24] || '')         // interpretacion_noviolencia
+    };
+
+    // Serialización final: convertir a JSON puro y de vuelta para garantizar
+    // que NO queden objetos Date ni tipos no serializables en el retorno.
+    // Esto previene el bug donde google.script.run recibe null silenciosamente.
+    const resultado = {
+      success: true,
+      candidato: candidato,
+      disc: disc,
+      valanti: valanti,
+      etiquetasValanti: ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia']
+    };
+
+    Logger.log('[getPruebasData] Retornando objeto exitoso para ID "%s"', targetId);
+    return JSON.parse(JSON.stringify(resultado));
+
   } catch (error) {
-    return { 
-      success: false, 
-      error: "Error al procesar la solicitud: " + error.toString() 
+    Logger.log('[getPruebasData] ERROR: %s', error.toString());
+    return {
+      success: false,
+      error: "Error al procesar la solicitud: " + error.toString()
     };
   }
 }

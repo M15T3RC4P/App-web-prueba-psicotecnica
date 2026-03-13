@@ -150,6 +150,15 @@
         const spinner = document.getElementById('loadingSpinner');
         if (spinner) spinner.style.display = 'none';
 
+        // GUARD: GAS puede llamar withSuccessHandler(null) si la función del servidor
+        // retorna un tipo no serializable (ej: Date). Nunca debería pasar con los fixes
+        // aplicados, pero se mantiene como defensa en profundidad.
+        if (response === null || response === undefined) {
+            console.error('[Dashboard] ERROR: La respuesta del servidor es null/undefined.');
+            showToast('Error interno del servidor. Revisa Apps Script → Ejecuciones para ver el Logger.', 'error');
+            return;
+        }
+
         // Log de depuración (visible en la consola del navegador con F12)
         console.log('[Dashboard] Respuesta del backend:', JSON.stringify(response, null, 2));
 
@@ -162,19 +171,21 @@
         const reportContainer = document.getElementById('reportContainer');
         if (reportContainer) reportContainer.classList.remove('hidden');
 
-        // Renderizar Datos
-        // NOTA: getPruebasData devuelve {candidato, disc, valanti, etiquetasValanti}
         const { candidato, disc, valanti, etiquetasValanti } = response;
+
+        console.log('[Dashboard] candidato:', candidato);
+        console.log('[Dashboard] disc:', disc);
+        console.log('[Dashboard] valanti:', valanti);
 
         renderCandidateInfo(candidato);
 
         // Renderizado Condicional DISC
-        // Solo requiere que 'disc' exista y que 'D' no sea estrictamente undefined
-        if (disc && disc.D !== undefined && disc.D !== null) {
+        // El backend devuelve disc=null cuando no hay datos, objeto con D/I/S/C cuando sí los hay.
+        if (disc) {
             renderDiscTable(disc);
             renderDiscChart(disc);
-            setText('discHighestChar', disc.highestChar);
-            setText('discFullInterpretation', disc.interpretation);
+            setText('discHighestChar', disc.highestChar || 'Sin datos');
+            setText('discFullInterpretation', disc.interpretation || 'Sin interpretación disponible.');
         } else {
             const tbody = document.getElementById('discTableBody');
             if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500">Prueba DISC no realizada o sin datos</td></tr>';
@@ -183,11 +194,11 @@
         }
 
         // Renderizado Condicional Valanti
-        if (valanti && valanti.valor1 !== undefined && valanti.valor1 !== null) {
+        // El backend devuelve valanti=null cuando no hay datos.
+        if (valanti) {
             renderValantiTable(valanti, etiquetasValanti);
             renderValantiChart(valanti, etiquetasValanti);
-
-            setText('valantiHighest', valanti.highestChar);
+            setText('valantiHighest', valanti.highestChar || 'Sin datos');
             renderValantiInterpretations(valanti, etiquetasValanti);
         } else {
             const tbody = document.getElementById('valantiTableBody');
@@ -272,18 +283,27 @@
         const ctx = document.getElementById('discChart').getContext('2d');
         if (discChartInstance) discChartInstance.destroy();
 
+        // parseFloat garantiza tipo numérico puro para Chart.js
+        const scores = [
+            parseFloat(disc.D) || 0,
+            parseFloat(disc.I) || 0,
+            parseFloat(disc.S) || 0,
+            parseFloat(disc.C) || 0
+        ];
+        console.log('[renderDiscChart] scores:', scores);
+
         discChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['D', 'I', 'S', 'C'],
                 datasets: [{
                     label: 'Puntaje',
-                    data: [disc.D, disc.I, disc.S, disc.C],
+                    data: scores,
                     backgroundColor: [
-                        COLORS.red,     // D - Rojo
-                        COLORS.aqua,    // I - Verde Agua
-                        COLORS.coral,   // S - Coral
-                        COLORS.teal     // C - Teal (azuloso)
+                        COLORS.red,
+                        COLORS.aqua,
+                        COLORS.coral,
+                        COLORS.teal
                     ],
                     borderColor: [COLORS.red, COLORS.aqua, COLORS.coral, COLORS.teal],
                     borderWidth: 1,
@@ -291,7 +311,7 @@
                 }]
             },
             options: {
-                indexAxis: 'y', // Horizontal
+                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
@@ -330,7 +350,16 @@
         const ctx = document.getElementById('valantiChart').getContext('2d');
         if (valantiChartInstance) valantiChartInstance.destroy();
 
-        const scores = [valanti.valor1, valanti.valor2, valanti.valor3, valanti.valor4, valanti.valor5];
+        // parseFloat garantiza tipo numérico puro para Chart.js
+        const scores = [
+            parseFloat(valanti.valor1) || 0,
+            parseFloat(valanti.valor2) || 0,
+            parseFloat(valanti.valor3) || 0,
+            parseFloat(valanti.valor4) || 0,
+            parseFloat(valanti.valor5) || 0
+        ];
+        console.log('[renderValantiChart] scores:', scores);
+
         if (!labels || !labels[0]) {
             labels = ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
         }
@@ -343,7 +372,7 @@
                     label: 'Valores',
                     data: scores,
                     fill: true,
-                    backgroundColor: 'rgba(46, 156, 157, 0.2)', // Teal transparente
+                    backgroundColor: 'rgba(46, 156, 157, 0.2)',
                     borderColor: COLORS.teal,
                     pointBackgroundColor: COLORS.teal,
                     pointBorderColor: '#fff',
@@ -365,9 +394,7 @@
                         suggestedMin: 0
                     }
                 },
-                plugins: {
-                    legend: { display: false } // Ya sabemos que son valores
-                }
+                plugins: { legend: { display: false } }
             }
         });
     }
@@ -386,8 +413,17 @@
             const interpretation = interpretations[index];
             if (!interpretation) return;
 
+            // AJUSTE 1: Centrado de "No Violencia"
+            // La grilla tiene 2 columnas. Si es el índice 4 (5to elemento, No Violencia),
+            // hacemos que ocupe las 2 columnas y establecemos un width maximo igual a
+            // una tarjeta normal (50% menos el gap) y lo centramos con margin: auto.
+            const isLast = (index === 4);
+            const extraStyles = isLast
+                ? 'grid-column: 1 / -1; width: calc(50% - 0.5rem); justify-self: center;'
+                : '';
+
             const card = `
-                <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); ${extraStyles}">
                     <div style="font-weight: 700; color: var(--color-teal); margin-bottom: 0.5rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem;">
                         ${label}
                     </div>
