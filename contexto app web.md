@@ -13,34 +13,34 @@ La aplicación es una **Web App desarrollada en Google Apps Script (GAS)**.
 ---
 
 ## 2. Arquitectura de Archivos
-- **`Código.gs`:** Punto de entrada del servidor. Gestiona el enrutamiento (`doGet`), la entrega de preguntas (`getStaticQuestions`), el guardado de respuestas (`saveTestResults`) y la extracción de datos para reportes (`getPruebasData`).
-- **`index.html`:** Estructura principal para los candidatos (Login y zona de pruebas).
-- **`Dashboard.html`:** Interfaz de visualización de resultados para administradores.
-- **`js-logic.html`:** Lógica del lado del cliente para el flujo de las pruebas (SPA, validación de respuestas, timers, modales).
-- **`Controller.js.html`:** Lógica específica para el Dashboard (Búsqueda por ID, renderizado de gráficos y tablas de interpretación).
-- **`css-styles.html`:** Sistema de diseño unificado, tokens de color y clases de utilidad propias.
+- **`Código.gs`:** Punto de entrada del servidor. Gestiona enrutamiento (`doGet`), autenticación segura SHA-256 con rate limiting, entrega de preguntas (`getStaticQuestions`), guardado de respuestas (`saveTestResults`) y extracción de reportes (`getPruebasData`).
+- **`index.html`:** Interfaz principal. Contiene el flujo SPA del candidato (Login, zona de pruebas, cronómetro, timeout) y el modal de autenticación segura (Glassmorphism) para administradores.
+- **`Dashboard.html`:** Panel de resultados. Protegido por un guard de `sessionStorage`. Incluye encabezados repetitivos (para impresión) y estructura de celdas.
+- **`js-logic.html`:** Lógica del lado del cliente para el candidato. Gestiona el estado (`appData`), cronómetro global (56 min), validación de respuestas y envío al backend.
+- **`Controller.js.html`:** Lógica del Dashboard. Búsqueda por ID, inyección de gráficos (Chart.js), tablas de interpretación y nombrado dinámico de PDFs al imprimir.
+- **`css-styles.html`:** Sistema de diseño unificado. Tokens de color corporativos, animaciones (pulso del cronómetro) y reglas `@media print` extensivas (saltos de página, footer fijo).
 
 ---
 
 ## 3. Flujo Lógico de Usuario (Candidato)
-1. **Landing:** El usuario elige entre "Ingresar al Dashboard" o "Ingresar a Prueba".
-2. **Login:** Captura de datos básicos (Nombre, ID, Edad, Cargo, Sede). Estos se almacenan temporalmente en el objeto `appData.user`.
-3. **Panel de Pruebas:** El candidato visualiza dos módulos: **Valanti** y **DISC**. Puede realizarlos en cualquier orden.
+1. **Landing:** El usuario ingresa a la prueba mediante un botón principal o al dashboard mediante un candado discreto.
+2. **Login:** Captura datos básicos (Nombre, ID, Edad, Cargo, Sede). Se guardan temporalmente en `appData.user`.
+3. **Cronómetro Global:** Al hacer login, inicia una cuenta regresiva de 56 minutos. Se pausa al estar en el menú de selección y se reanuda al entrar a una prueba, usando `sessionStorage` para persistencia. Si se agota el tiempo, guarda respuestas parciales automáticamente.
 4. **Ejecución de Pruebas:**
-   - **Valanti:** Prueba de valores (Verdad, Rectitud, Paz, Amor, No Violencia). Se divide en dos partes con reglas de puntuación distintas (Suma obligatoria de 3 puntos por par).
-   - **DISC:** Prueba de personalidad comportamental. Ordenamiento de 1 a 4 por grupo de adjetivos/situaciones.
-5. **Finalización:** Al terminar cada módulo, se llama a `google.script.run.saveTestResults()`, que añade una fila al Google Sheet correspondiente con los datos del usuario + sus respuestas crudas.
+   - **Valanti:** Prueba de valores dividida en dos partes (positivo y negativo). Regla estricta de suma de 3 puntos por par.
+   - **DISC:** Prueba comportamental. Ordenamiento de 1 a 4 sin repetir números.
+5. **Finalización:** Se envían datos a Google Sheets vía `saveTestResults()`.
 
 ---
 
 ## 4. Lógica del Dashboard (Administrador)
-- **Búsqueda:** Se ingresa el ID/Cédula del candidato.
-- **Extracción de Datos:** El backend busca en las hojas `DISC` y `Valanti`. 
-  - **Importante:** La búsqueda es inversa (de abajo hacia arriba) para obtener siempre el registro más reciente en caso de múltiples intentos.
-- **Visualización:**
-  - **DISC:** Gráfico de barras horizontales (Chart.js) + Interpretación textual basada en la característica más alta.
-  - **Valanti:** Gráfico de radar (Chart.js) + Interpretación de los 5 valores universales.
-- **Impresión:** Sistema de @media print optimizado para generar reportes en PDF tamaño A4 con membrete corporativo.
+- **Autenticación Segura:** El administrador ingresa la clave en un modal. El backend valida contra un hash SHA-256 (`ADMIN_PASS_HASH`), aplicando rate limiting (bloqueos locales de 30s y del servidor de 5min). Si es exitoso, se genera un token UUID (`admin_session_token`).
+- **Visualización y Gráficos:** Gráficos responsivos de Radar (Valanti) y Barras (DISC) con Chart.js, junto con interpretaciones en tarjetas optimizadas.
+- **Sistema de Impresión:** Optimizaciones avanzadas para PDF:
+  - Header repetitivo con datos del candidato a partir de la segunda página.
+  - Footer corporativo fijado al final de todas las páginas.
+  - Generación de salto de página inteligente (`page-break-inside: avoid`).
+  - Nombre del archivo PDF dinámico (Día-Mes-Año_Nombre_Cargo).
 
 ---
 
@@ -52,11 +52,10 @@ La aplicación es una **Web App desarrollada en Google Apps Script (GAS)**.
 ---
 
 ## 6. Consideraciones para Ajustes Futuros
-Al solicitar cambios, ten en cuenta:
-1. **Integridad de Fórmulas:** Los resultados numéricos dependen de fórmulas pre-existentes en las columnas finales de las hojas de cálculo. El código solo lee esos resultados calculados.
-2. **Clasificación de Preguntas:** Las preguntas están "hardcodeadas" en `getStaticQuestions()` en `Código.gs` para evitar latencia de lectura del sheet.
-3. **Persistencia:** No hay base de datos SQL o NoSQL; toda la persistencia es `appendRow()` en Sheets.
-4. **Diseño:** Se debe mantener la coherencia con las variables CSS definidas en `css-styles.html`.
+1. **Seguridad:** Las contraseñas nunca deben viajar ni guardarse en texto plano. Se usa `Utilities.computeDigest`.
+2. **Impresión:** Cualquier alteración del DOM en el Dashboard debe probarse en la vista de impresión (`Ctrl+P`) para validar que las tablas/gráficos no se corten.
+3. **Persistencia:** Almacenamiento local se apoya en `sessionStorage` para el token admin y el estado del cronómetro.
+4. **Cálculos:** Las puntuaciones dependen enteramente de las fórmulas nativas de Google Sheets. El código se limita a insertar datos crudos y leer celdas finales.
 
 ---
 *Este archivo debe ser proporcionado a la IA al inicio de cualquier sesión de ajuste para garantizar que comprenda el ecosistema completo.*

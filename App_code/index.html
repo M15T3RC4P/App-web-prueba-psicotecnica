@@ -270,7 +270,10 @@
                     <!-- PREGUNTAS AQUI -->
                 </div>
 
-                <div class="mt-8 pt-4 border-t flex justify-end">
+                <div class="mt-8 pt-4 border-t flex justify-between items-center">
+                    <!-- Cronómetro global -->
+                    <span id="test-timer" class="test-timer">Tiempo: 56:00</span>
+
                     <button onclick="nextQuestion()"
                         class="btn-primary px-10 py-3 rounded-lg font-bold shadow-lg flex items-center">
                         Siguiente <i class="fas fa-arrow-right ml-2"></i>
@@ -289,6 +292,40 @@
                 <p class="text-slate-600 text-lg">Muchas gracias por completar las pruebas. Hemos registrado tus
                     resultados exitosamente.</p>
                 <div class="mt-8 text-sm text-slate-400">Puedes cerrar esta ventana.</div>
+            </div>
+        </section>
+
+        <!-- 5. TIEMPO AGOTADO -->
+        <section id="view-timeout" class="view-section hidden text-center pt-20">
+            <div style="
+                background: rgba(255,255,255,0.92);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border: 1px solid rgba(239,68,68,0.2);
+                border-radius: 1.25rem;
+                box-shadow: 0 24px 64px rgba(0,0,0,0.12);
+                padding: 3rem 2.5rem;
+                max-width: 540px;
+                margin: 0 auto;
+            ">
+                <div style="
+                    width: 6rem; height: 6rem;
+                    background: #fef2f2;
+                    border-radius: 50%;
+                    display: flex; align-items: center; justify-content: center;
+                    margin: 0 auto 1.5rem;
+                    border: 3px solid #fecaca;
+                ">
+                    <i class="fas fa-hourglass-end" style="font-size: 2.5rem; color: #ef4444;"></i>
+                </div>
+                <h2 style="font-size: 2rem; font-weight: 800; color: #1e293b; margin: 0 0 1rem;">Tiempo agotado</h2>
+                <p style="color: #64748b; font-size: 1rem; line-height: 1.7; margin: 0;">
+                    El tiempo disponible para realizar las pruebas ha finalizado.<br>
+                    Las respuestas registradas hasta este momento han sido guardadas exitosamente.
+                </p>
+                <div style="margin-top: 2rem; font-size: 0.8rem; color: #94a3b8;">
+                    <i class="fas fa-lock mr-1"></i> Puedes cerrar esta ventana.
+                </div>
             </div>
         </section>
 

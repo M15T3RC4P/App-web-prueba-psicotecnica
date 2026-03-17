@@ -10,7 +10,152 @@
         seenInstructions: { valanti_p1: false, valanti_p2: false }
     };
 
-    // 1. INICIAR Y CARGAR DATOS (Ahora carga getStaticQuestions)
+    // ─── CRONÓMETRO GLOBAL (56 minutos) ───────────────────────────────────────
+    const TIMER_DURATION_MS = 56 * 60 * 1000;   // 3 360 000 ms
+    let   _timerInterval    = null;
+
+    /** Formatea milisegundos a "MM:SS" */
+    function _formatTime(ms) {
+        if (ms <= 0) return '00:00';
+        const totalSec = Math.ceil(ms / 1000);
+        const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+        const ss = String(totalSec % 60).padStart(2, '0');
+        return mm + ':' + ss;
+    }
+
+    /** Actualiza el span y aplica clases de alerta */
+    function _updateTimerDisplay(remainingMs) {
+        const el = document.getElementById('test-timer');
+        if (!el) return;
+        el.textContent = 'Tiempo: ' + _formatTime(remainingMs);
+        el.classList.remove('warning', 'danger');
+        if (remainingMs <= 120_000)      el.classList.add('danger');
+        else if (remainingMs <= 300_000) el.classList.add('warning');
+    }
+
+    /**
+     * Inicia el cronómetro desde sessionStorage (reanuda) o desde 0 (nuevo).
+     * Debe llamarse cuando el candidato ingresa al panel de pruebas por primera vez.
+     */
+    function startGlobalTimer() {
+        // Si el tiempo ya expiró antes de que se llame, ir a timeout de inmediato
+        const savedEnd = sessionStorage.getItem('timerEndTime');
+        if (savedEnd) {
+            const remaining = parseInt(savedEnd) - Date.now();
+            if (remaining <= 0) {
+                onTimeUp(true);  // expired on reload
+                return;
+            }
+        }
+
+        // Calcular el endTime correcto
+        let endTime;
+        if (savedEnd && !sessionStorage.getItem('timerPaused')) {
+            // Sesión en curso, prueba activa → usar endTime guardado
+            endTime = parseInt(savedEnd);
+        } else if (sessionStorage.getItem('timerPaused') === 'true') {
+            // Estaba pausado → reanudar desde el tiempo restante guardado
+            resumeTimer();
+            return;
+        } else {
+            // Primera vez → calcular nuevo endTime
+            endTime = Date.now() + TIMER_DURATION_MS;
+            sessionStorage.setItem('timerEndTime', String(endTime));
+        }
+
+        _runTimerLoop(endTime);
+    }
+
+    /** Bucle principal del cronómetro */
+    function _runTimerLoop(endTime) {
+        if (_timerInterval) clearInterval(_timerInterval);
+
+        _timerInterval = setInterval(() => {
+            const remaining = endTime - Date.now();
+            _updateTimerDisplay(remaining);
+            if (remaining <= 0) {
+                clearInterval(_timerInterval);
+                onTimeUp(false);
+            }
+        }, 500);
+
+        _updateTimerDisplay(endTime - Date.now());  // render inmediato
+    }
+
+    /** Pausa el cronómetro (candidato vuelve al panel de selección) */
+    function pauseTimer() {
+        if (_timerInterval) {
+            clearInterval(_timerInterval);
+            _timerInterval = null;
+        }
+        const savedEnd = sessionStorage.getItem('timerEndTime');
+        if (savedEnd) {
+            const remaining = Math.max(0, parseInt(savedEnd) - Date.now());
+            sessionStorage.setItem('timerPaused', 'true');
+            sessionStorage.setItem('timerRemainingMs', String(remaining));
+        }
+    }
+
+    /** Reanuda el cronómetro al entrar a una prueba */
+    function resumeTimer() {
+        const remainingMs = parseInt(sessionStorage.getItem('timerRemainingMs') || '0');
+        if (remainingMs <= 0) {
+            onTimeUp(false);
+            return;
+        }
+        const newEndTime = Date.now() + remainingMs;
+        sessionStorage.setItem('timerEndTime', String(newEndTime));
+        sessionStorage.removeItem('timerPaused');
+        sessionStorage.removeItem('timerRemainingMs');
+        _runTimerLoop(newEndTime);
+    }
+
+    /**
+     * Se ejecuta cuando el tiempo llega a 00:00.
+     * Guarda respuestas parciales y muestra la pantalla de tiempo agotado.
+     * @param {boolean} wasExpired  true si el tiempo ya había expirado al recargar
+     */
+    function onTimeUp(wasExpired) {
+        if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
+
+        const loader = document.getElementById('loading-overlay');
+        const loaderText = loader ? loader.querySelector('p') : null;
+
+        // Guardar respuestas parciales de la prueba actualmente activa (si hay)
+        const activeType = appData.current && appData.current.type;
+        const activeKey  = activeType ? activeType.toLowerCase() : null;
+
+        const savePending = activeKey &&
+                            !appData.status[activeKey] &&
+                            appData.answers[activeKey] &&
+                            appData.answers[activeKey].length > 0;
+
+        const goToTimeout = () => {
+            showView('view-timeout');
+        };
+
+        if (savePending && !wasExpired) {
+            if (loaderText) loaderText.innerText = 'Guardando respuestas parciales...';
+            if (loader) loader.classList.remove('hidden');
+
+            google.script.run
+                .withSuccessHandler(() => {
+                    if (loader) loader.classList.add('hidden');
+                    goToTimeout();
+                })
+                .withFailureHandler(() => {
+                    if (loader) loader.classList.add('hidden');
+                    goToTimeout();
+                })
+                .saveTestResults(activeType, appData.user, appData.answers[activeKey]);
+        } else {
+            goToTimeout();
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // 1. INICIAR Y CARGAR DATOS
+
     window.onload = function () {
         google.script.run
             .withSuccessHandler(data => {
@@ -66,6 +211,8 @@
         document.getElementById('headerRole').innerText = appData.user.cargo;
         document.getElementById('userInfoHeader').classList.remove('hidden');
         showView('view-dashboard');
+        // Iniciar el cronómetro global la primera vez que accede al panel
+        startGlobalTimer();
     };
 
     // 4. INICIAR PRUEBA
@@ -74,8 +221,6 @@
         if (appData.status[key]) return;
 
         appData.current.type = type;
-        // Resume from saved index if exists, otherwise 0
-        // We do NOT reset answers here to allow resuming
         if (!appData.answers[key]) appData.answers[key] = [];
 
         const wrapper = document.getElementById('test-wrapper');
@@ -87,9 +232,15 @@
 
         renderQuestion();
         showView('view-test');
+        // Solo reanudar si estaba pausado; si ya corre, no interrumpir
+        if (sessionStorage.getItem('timerPaused') === 'true') {
+            resumeTimer();
+        }
     }
 
     function pauseTest() {
+        // Pausar el cronómetro al volver al panel de selección
+        pauseTimer();
         showView('view-dashboard');
     }
 

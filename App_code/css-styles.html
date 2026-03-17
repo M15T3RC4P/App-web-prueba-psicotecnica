@@ -261,8 +261,31 @@
     border-left: 4px solid var(--color-teal);
   }
 
+
+  /* ─── Cronómetro Global (view-test) ─────────────────────────────── */
+  .test-timer {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #475569;
+    transition: color 0.3s ease;
+  }
+  .test-timer.warning {
+    color: #f59e0b;
+    animation: timer-pulse 1.5s infinite;
+  }
+  .test-timer.danger {
+    color: #ef4444;
+    animation: timer-pulse 0.8s infinite;
+  }
+  @keyframes timer-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.45; }
+  }
+
   /* Ajustes impresión */
   @media print {
+
     body {
       background: white !important;
       color: black !important;
