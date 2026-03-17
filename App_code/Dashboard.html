@@ -19,7 +19,7 @@
 
         /* Layout de Impresión A4 */
         .print-container {
-            max-width: 21cm;
+            max-width: 22cm;
             margin: 2rem auto;
             background: white;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -116,7 +116,7 @@
         @page {
             /* AJUSTE 4: Márgenes reducidos A4 portrait */
             size: A4 portrait;
-            margin: 8mm 10mm 18mm 10mm;
+            margin: 8mm 1mm 8mm 1mm;
             /* top right bottom left — bottom extra para footer fijo */
         }
 
@@ -350,25 +350,25 @@
             <div
                 style="margin-top: 1.5rem; border-left: 4px solid var(--secondary-color); background-color: #fff1f2; padding: 1.5rem; border-radius: 0.5rem;">
                 <!-- 1. PERFIL: Mostrar directamente el valor como título -->
-                <h4 style="margin: 0 0 1rem 0; color: #881337; font-size: 1.25rem; font-weight: 800; text-transform: uppercase;"
+                <h4 style="margin: 0 0 1rem 0; color: #881337; font-size: 0.95rem; font-weight: 800; text-transform: uppercase;"
                     id="discTargetPerfil">Sin datos de perfil</h4>
 
                 <!-- 2. CARACTERÍSTICAS -->
                 <div style="margin-bottom: 0.75rem;">
-                    <span style="font-weight: 700; color: #4c0519;">Características:</span>
-                    <span id="discTargetCaracteristicas" style="color: #4c0519; font-size: 0.95rem;">---</span>
+                    <span style="font-weight: 600; color: #4c0519;">Características:</span>
+                    <span id="discTargetCaracteristicas" style="color: #4c0519; font-size: 0.75rem;">---</span>
                 </div>
 
                 <!-- 3. DESCRIPCIÓN -->
                 <div style="margin-bottom: 0.75rem;">
-                    <span style="font-weight: 700; color: #4c0519;">Descripción del SER y comportamiento:</span>
-                    <span id="discTargetDescripcion" style="color: #4c0519; font-size: 0.95rem;">---</span>
+                    <span style="font-weight: 600; color: #4c0519;">Descripción del SER y comportamiento:</span>
+                    <span id="discTargetDescripcion" style="color: #4c0519; font-size: 0.75rem;">---</span>
                 </div>
 
                 <!-- 4. APORTE -->
                 <div>
-                    <span style="font-weight: 700; color: #4c0519;">Aporte al equipo:</span>
-                    <span id="discTargetAporte" style="color: #4c0519; font-size: 0.95rem;">---</span>
+                    <span style="font-weight: 600; color: #4c0519;">Aporte al equipo:</span>
+                    <span id="discTargetAporte" style="color: #4c0519; font-size: 0.75rem;">---</span>
                 </div>
             </div>
         </section>
@@ -420,8 +420,9 @@
                 </div>
 
                 <!-- Grilla de tarjetas para interpretaciones -->
-                <h5 style="color: #64748b; font-size: 0.95rem; margin-bottom: 1rem; margin-top: 0;">Análisis por Valor:
-                </h5>
+                <h4 style="color: #64748b; font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; margin-top: 0;">
+                    Análisis por Valor:
+                </h4>
                 <!-- AJUSTE 1: grid 2 columnas fijas. La 5ª tarjeta (No Violencia)
                      queda sola en su fila y se centra con justify-items + margin auto
                      aplicado desde Controller.js.html en el último hijo generado. -->
