@@ -267,6 +267,13 @@
       background: white !important;
       color: black !important;
       background-image: none !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Ocultar el repeat-header por defecto */
+    #repeat-header {
+      display: none;
     }
 
     .no-print {
@@ -278,6 +285,24 @@
       box-shadow: none !important;
       border: none !important;
       padding: 0 !important;
+    }
+
+    /* ENCABEZADO REPETIDO DESDE HOJA 2 */
+    #repeat-header {
+      display: block !important;
+      position: fixed !important;
+      top: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      height: 20mm !important;
+      text-align: right !important;
+      padding: 4mm 8mm !important;
+      font-size: 6.5pt !important;
+      background: transparent !important;
+      box-sizing: border-box !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      z-index: 9999 !important;
     }
   }
 </style>

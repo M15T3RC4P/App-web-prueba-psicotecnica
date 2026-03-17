@@ -265,6 +265,32 @@
         }).getScriptUrl();
     }
 
+    // Funcionalidad de Impresión con Nombre Dinámico de PDF
+    function imprimirReporte() {
+        const nombreCand = document.getElementById('candName').textContent.trim();
+        const sedeCand = document.getElementById('candSede').textContent.trim();
+
+        let nombreValido = nombreCand === '---' ? 'Candidato_Sin_Nombre' : nombreCand.replace(/\s+/g, '_');
+        let sedeValida = sedeCand === '---' ? 'Sede_Invalida' : sedeCand.replace(/\s+/g, '_');
+
+        const fecha = new Date();
+        const dd = String(fecha.getDate()).padStart(2, '0');
+        const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+        const aa = String(fecha.getFullYear()).slice(-2);
+
+        const nombreArchivo = `Prueba_psicotécnica_${sedeValida}_${nombreValido}_${dd}-${mm}-${aa}`;
+
+        const tituloOriginal = document.title;
+        document.title = nombreArchivo;
+        window.print();
+
+        // Timeout para asegurar que la ventana de impresión capta el nombre 
+        // antes de restaurar el título original (previene problemas en algunos navegadores)
+        setTimeout(() => {
+            document.title = tituloOriginal;
+        }, 100);
+    }
+
     // Renderizado de Información Básica
     function renderCandidateInfo(data) {
         if (!data) return;
@@ -288,6 +314,11 @@
             }
         }
         setText('candDate', applicationDate);
+
+        // Llenar el Encabezado Repetido (Página 2 en adelante)
+        setText('rh-id', data.cedula || data.id);
+        setText('rh-nombre', data.nombre);
+        setText('rh-sede', data.sede);
     }
 
     // ==========================================
@@ -375,7 +406,7 @@
             const row = `
                 <tr>
                     <td class="p-2 font-medium">${label}</td>
-                    <td class="p-2 text-center font-bold" style="color: var(--color-teal)">${score}</td>
+                    <td class="p-2 text-center font-bold">${score}</td>
                     <td class="p-2 text-center text-gray-500">${intensity}</td>
                 </tr>
             `;
@@ -460,11 +491,11 @@
                 : '';
 
             const card = `
-                <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); ${extraStyles}">
-                    <div style="font-weight: 700; color: var(--color-teal); margin-bottom: 0.3rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.3rem;">
+                <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 0.7rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); ${extraStyles}">
+                    <div style="font-weight: 700; color: var(--color-teal); margin-bottom: 0.3rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.3rem;">
                         ${label}
                     </div>
-                    <div style="color: #475569; font-size: 0.75rem; line-height: 1.2; text-align: justify;">
+                    <div style="color: #475569; font-size: 0.7rem; line-height: 1.6; text-align: justify;">
                         ${interpretation}
                     </div>
                 </div>
