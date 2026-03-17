@@ -308,7 +308,7 @@
                 <tr>
                     <td class="p-2 font-medium">${label}</td>
                     <td class="p-2 text-center font-bold">${score}</td>
-                    <td class="p-2 text-center text-sm text-gray-500">${intensity}</td>
+                    <td class="p-2 text-center text-gray-500">${intensity}</td>
                 </tr>
             `;
             tbody.innerHTML += row;
@@ -376,7 +376,7 @@
                 <tr>
                     <td class="p-2 font-medium">${label}</td>
                     <td class="p-2 text-center font-bold" style="color: var(--color-teal)">${score}</td>
-                    <td class="p-2 text-center text-sm text-gray-500">${intensity}</td>
+                    <td class="p-2 text-center text-gray-500">${intensity}</td>
                 </tr>
             `;
             tbody.innerHTML += row;
@@ -460,11 +460,11 @@
                 : '';
 
             const card = `
-                <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); ${extraStyles}">
-                    <div style="font-weight: 700; color: var(--color-teal); margin-bottom: 0.5rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem;">
+                <div style="background-color: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); ${extraStyles}">
+                    <div style="font-weight: 700; color: var(--color-teal); margin-bottom: 0.3rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.3rem;">
                         ${label}
                     </div>
-                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.6; text-align: justify;">
+                    <div style="color: #475569; font-size: 0.75rem; line-height: 1.2; text-align: justify;">
                         ${interpretation}
                     </div>
                 </div>

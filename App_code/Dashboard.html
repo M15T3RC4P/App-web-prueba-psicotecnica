@@ -19,11 +19,11 @@
 
         /* Layout de Impresión A4 */
         .print-container {
-            max-width: 22cm;
+            max-width: 25cm;
             margin: 2rem auto;
             background: white;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            min-height: 29.7cm;
+            min-height: 30cm;
             /* Altura A4 aproximada */
             position: relative;
         }
@@ -33,7 +33,7 @@
             background-color: rgb(23, 105, 106);
             /* Slate oscuro profesional */
             color: white;
-            padding: 1.5rem 2rem;
+            padding: 1rem 2rem;
             border-bottom: 4px solid var(--color-teal-light);
             /* Rojo de marca */
             display: flex;
@@ -42,7 +42,7 @@
         }
 
         .report-section {
-            padding: 2rem;
+            padding: 1rem 2rem;
             border-bottom: 1px solid #e2e8f0;
         }
 
@@ -77,7 +77,7 @@
         .report-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
         }
 
         .report-table th {
@@ -97,16 +97,16 @@
 
         /* Ajustes para gráficos en reporte */
         .chart-container-print {
-            position: relative;
-            height: 250px;
-            width: 100%;
+            position: center;
+            height: 230px;
+            width: 90%;
         }
 
         /* Footer de Impresión */
         .report-footer {
             text-align: center;
             padding: 1rem;
-            font-size: 0.75rem;
+            font-size: 0.55rem;
             color: #94a3b8;
             border-top: 1px solid #e2e8f0;
             background-color: #f8fafc;
@@ -116,7 +116,7 @@
         @page {
             /* AJUSTE 4: Márgenes reducidos A4 portrait */
             size: A4 portrait;
-            margin: 8mm 1mm 8mm 1mm;
+            margin: 0mm 0mm 0mm 0mm;
             /* top right bottom left — bottom extra para footer fijo */
         }
 
@@ -125,7 +125,7 @@
                 background: white !important;
                 margin: 0;
                 padding: 0;
-                padding-bottom: 40px;
+                padding-bottom: 0px;
                 /* Espacio para que el footer fijo no tape el contenido */
             }
 
@@ -138,12 +138,6 @@
                 min-height: auto;
             }
 
-            /* AJUSTE 5: Ocultar navegación y elementos no imprimibles */
-            .no-print,
-            nav {
-                display: none !important;
-            }
-
             /* AJUSTE 5: Mantener colores corporativos en impresión */
             .report-header,
             .pill-red,
@@ -151,22 +145,6 @@
             .report-footer {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-            }
-
-            /* AJUSTE 2: Evitar corte de contenido entre páginas */
-            .report-section {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-
-            .chart-container-print {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-
-            .report-table {
-                page-break-inside: avoid;
-                break-inside: avoid;
             }
 
             /* Tarjetas de interpretación Valanti */
@@ -284,7 +262,7 @@
         </section>
 
         <!-- Bloque Informativo Institucional -->
-        <section class="report-section" style="padding-top: 1.5rem; padding-bottom: 1.5rem; background-color: #ffffff;">
+        <section class="report-section" style="padding-top: 0.9rem; padding-bottom: 0.9rem; background-color: #ffffff;">
             <div style="
                 background: linear-gradient(135deg, rgba(32, 142, 143, 0.05) 0%, rgba(217, 33, 39, 0.03) 100%);
                 border-left: 4px solid var(--primary-color);
@@ -348,7 +326,7 @@
 
             <!-- Nuevo Bloque Interpretación DISC -->
             <div
-                style="margin-top: 1.5rem; border-left: 4px solid var(--secondary-color); background-color: #fff1f2; padding: 1.5rem; border-radius: 0.5rem;">
+                style="margin-top: 1.5rem; border-left: 4px solid var(--secondary-color); background-color: #fff1f2; padding: 1rem; border-radius: 0.5rem;">
                 <!-- 1. PERFIL: Mostrar directamente el valor como título -->
                 <h4 style="margin: 0 0 1rem 0; color: #881337; font-size: 0.95rem; font-weight: 800; text-transform: uppercase;"
                     id="discTargetPerfil">Sin datos de perfil</h4>
@@ -397,11 +375,6 @@
                             <!-- Inyectado por JS -->
                         </tbody>
                     </table>
-                    <div
-                        style="margin-top: 1.5rem; font-size: 0.85rem; color: #64748b; text-align: justify; line-height: 1.4;">
-                        Los puntajes reflejan la prioridad que el candidato da a cada valor universal. Valores más altos
-                        indican una fuerte alineación con el principio ético correspondiente.
-                    </div>
                 </div>
 
                 <!-- Gráfico -->
@@ -410,10 +383,15 @@
                 </div>
             </div>
 
+            <div style="margin-top: 1rem; font-size: 0.65rem; color: #64748b; text-align: center; line-height: 1.4;">
+                Los puntajes reflejan la prioridad que el candidato da a cada valor universal. Valores más altos
+                indican una fuerte alineación con el principio ético correspondiente.
+            </div>
+
             <!-- Nuevo Bloque Interpretación Valanti -->
-            <div style="margin-top: 2.5rem;">
+            <div style="margin-top: 1rem;">
                 <div
-                    style="background-color: #f1f5f9; padding: 1.25rem; border-radius: 0.5rem; border-left: 4px solid var(--primary-color); margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    style="background-color: #f1f5f9; padding: 1rem; border-radius: 0.5rem; border-left: 4px solid var(--primary-color); margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                     <h5 style="margin: 0; color: #1e293b; font-size: 1.15rem; font-weight: 600;">Valor más destacado:
                         <span id="valantiHighest" style="color:  var(--primary-color); font-weight: 600;">---</span>
                     </h5>
