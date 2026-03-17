@@ -144,16 +144,17 @@ function saveTestResults(testType, userData, answers) {
 
 
 /**
- * Lee la hoja unificada 'Resultado' (columnas A:Y) y retorna los datos
+ * Lee la hoja unificada 'Resultado' y retorna los datos
  * del candidato cuyo ID coincide con targetId (búsqueda inversa = registro más reciente).
  *
  * Estructura de columnas (0-based):
- *  0=fecha, 1=ID, 2=nombre, 3=edad, 4=genero, 5=sede, 6=cargo, 7=nivel_estudio
- *  8=D(dominante), 9=I(influyente), 10=S(estable), 11=C(minucioso),
- *  12=caracteristica_mas_alta, 13=interpretacion_mas_alta
- *  14=verdad, 15=rectitud, 16=paz, 17=amor, 18=noviolencia,
- *  19=valor_mas_alto, 20=interp_verdad, 21=interp_rectitud, 22=interp_paz,
- *  23=interp_amor, 24=interp_noviolencia
+ *  A(0): fecha, B(1): ID, C(2): nombre, D(3): sede, E(4): cargo
+ *  F(5): suma_a_dominante, G(6): suma_b_influyente, H(7): suma_c_estable, I(8): suma_d_minucioso
+ *  J(9): perfil_mas_alto, K(10): caracteristicas_mas_alto, L(11): descripcion_mas_alto, M(12): aporte_mas_alto
+ *  N(13): verdad_normalizado, O(14): rectitud_normalizado, P(15): paz_normalizado, Q(16): amor_normalizado, R(17): noviolencia_normalizado
+ *  S(18): valor_mas_alto
+ *  T(19): interpretacion_verdad, U(20): interpretacion_rectitud, V(21): interpretacion_paz
+ *  W(22): interpretacion_amor,  X(23): interpretacion_noviolencia
  */
 function getPruebasData(targetId) {
 
@@ -177,30 +178,26 @@ function getPruebasData(targetId) {
       return { success: false, error: "La hoja 'Resultado' no contiene datos." };
     }
 
-    // Leer todas las filas de datos: A2 hasta la columna 25 (Y) fija.
-    // Se usa 25 fijo para garantizar que el rango alcanza Y incluso si
-    // getLastColumn() devuelve un número menor por columnas sin datos en esa fila.
-    const numCols = Math.max(lastCol, 25);
-    const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+    // Leer todas las filas de datos: A2 hasta la columna X (24).
+    const numCols = Math.max(lastCol, 24);
+    const dataRows = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
     const targetStr = String(targetId).trim();
 
     // Búsqueda inversa: último registro primero.
-    // Logger en el loop SOLO en caso de no encontrar (no por fila, evita timeout)
     let row = null;
     let foundIndex = -1;
-    for (let i = data.length - 1; i >= 0; i--) {
-      const cellId = String(data[i][1]).trim();
+    for (let i = dataRows.length - 1; i >= 0; i--) {
+      const cellId = String(dataRows[i][1]).trim();
       if (cellId === targetStr) {
-        row = data[i];
+        row = dataRows[i];
         foundIndex = i + 2;
         break;
       }
     }
 
     if (!row) {
-      Logger.log('[getPruebasData] ID "%s" NO encontrado. Total filas escaneadas: %s', targetId, data.length);
-      // Muestra las primeras 5 IDs para ayudar al diagnóstico
-      const muestra = data.slice(0, 5).map(r => String(r[1])).join(', ');
+      Logger.log('[getPruebasData] ID "%s" NO encontrado. Total filas escaneadas: %s', targetId, dataRows.length);
+      const muestra = dataRows.slice(0, 5).map(r => String(r[1])).join(', ');
       Logger.log('[getPruebasData] Primeros IDs en la hoja: %s', muestra);
       return {
         success: false,
@@ -209,94 +206,66 @@ function getPruebasData(targetId) {
     }
 
     Logger.log('[getPruebasData] ID "%s" encontrado en fila %s.', targetId, foundIndex);
-    Logger.log('[getPruebasData] Columnas I-N (DISC): [%s, %s, %s, %s, %s, %s]', row[8], row[9], row[10], row[11], row[12], row[13]);
-    Logger.log('[getPruebasData] Columnas O-S (Valanti): [%s, %s, %s, %s, %s]', row[14], row[15], row[16], row[17], row[18]);
 
-    // --- DATOS DEL CANDIDATO (A-H) ---
-    // CRÍTICO: row[0] es un objeto Date de GAS. DEBE convertirse a String
-    // antes de retornar, o google.script.run no puede serializarlo → response=null.
     let fechaStr = '';
     try {
       if (row[0] && row[0] instanceof Date) {
         fechaStr = row[0].toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
       } else if (row[0]) {
-        fechaStr = String(row[0]);
+        fechaStr = String(row[0]).trim();
       }
-    } catch(e) { fechaStr = ''; }
+    } catch(e) { fechaStr = 'Sin información'; }
 
-    const candidato = {
-      fecha:    fechaStr,
-      id:       String(row[1] || targetId),
-      nombre:   String(row[2] || ''),
-      edad:     String(row[3] || ''),
-      genero:   String(row[4] || ''),
-      sede:     String(row[5] || ''),
-      cargo:    String(row[6] || ''),
-      estudios: String(row[7] || '')
+    const parseText = (val) => {
+        if (val === null || val === undefined || String(val).trim() === '') return "Sin información";
+        return String(val).trim();
     };
 
-    // --- DISC (I-N, índices 8-13) ---
-    // CORRECCIÓN: No incluir Number(v)===0 como condición de "sin datos".
-    // Un puntaje de 0 es un valor VÁLIDO en DISC. Solo verificar vacío/null/undefined.
-    const dRaw = row[8];  // suma_a_dominante
-    const iRaw = row[9];  // suma_b_influyente
-    const sRaw = row[10]; // suma_c_estable
-    const cRaw = row[11]; // suma_d_minucioso
-
-    const sinDisc = [dRaw, iRaw, sRaw, cRaw]
-      .every(v => v === '' || v === null || v === undefined);
-
-    Logger.log('[getPruebasData] sinDisc=%s, valores=[%s,%s,%s,%s]', sinDisc, dRaw, iRaw, sRaw, cRaw);
-
-    const disc = sinDisc ? null : {
-      D: parseFloat(dRaw) || 0,
-      I: parseFloat(iRaw) || 0,
-      S: parseFloat(sRaw) || 0,
-      C: parseFloat(cRaw) || 0,
-      highestChar:    String(row[12] || ''), // caracteristica_mas_alta
-      interpretation: String(row[13] || '')  // interpretacion_mas_alta
+    const parseNum = (val) => {
+        if (val === null || val === undefined || String(val).trim() === '') return 0;
+        const num = parseFloat(val);
+        return isNaN(num) ? 0 : num;
     };
 
-    // --- VALANTI (O-Y, índices 14-24) ---
-    // CORRECCIÓN: No incluir Number(v)===0 como condición de "sin datos".
-    // Un valor normalizado de 0 es técnicamente posible. Solo verificar vacío/null/undefined.
-    const v1 = row[14]; // verdad_normalizado
-    const v2 = row[15]; // rectitud_normalizado
-    const v3 = row[16]; // paz_normalizado
-    const v4 = row[17]; // amor_normalizado
-    const v5 = row[18]; // noviolencia_normalizado
+    if (fechaStr === '') fechaStr = 'Sin información';
 
-    const sinValanti = [v1, v2, v3, v4, v5]
-      .every(v => v === '' || v === null || v === undefined);
-
-    Logger.log('[getPruebasData] sinValanti=%s, valores=[%s,%s,%s,%s,%s]', sinValanti, v1, v2, v3, v4, v5);
-
-    const valanti = sinValanti ? null : {
-      valor1: parseFloat(v1) || 0,
-      valor2: parseFloat(v2) || 0,
-      valor3: parseFloat(v3) || 0,
-      valor4: parseFloat(v4) || 0,
-      valor5: parseFloat(v5) || 0,
-      highestChar: String(row[19] || ''), // valor_mas_alto
-      int1: String(row[20] || ''),        // interpretacion_verdad
-      int2: String(row[21] || ''),        // interpretacion_rectitud
-      int3: String(row[22] || ''),        // interpretacion_paz
-      int4: String(row[23] || ''),        // interpretacion_amor
-      int5: String(row[24] || '')         // interpretacion_noviolencia
+    const dataObj = {
+      fecha: fechaStr,
+      id: parseText(row[1] || targetId),
+      nombre: parseText(row[2]),
+      sede: parseText(row[3]),
+      cargo: parseText(row[4]),
+      
+      dominante: parseNum(row[5]),
+      influyente: parseNum(row[6]),
+      estable: parseNum(row[7]),
+      minucioso: parseNum(row[8]),
+      
+      perfilMasAlto: parseText(row[9]),
+      caracteristicasMasAlto: parseText(row[10]),
+      descripcionMasAlto: parseText(row[11]),
+      aporteMasAlto: parseText(row[12]),
+      
+      verdad: parseNum(row[13]),
+      rectitud: parseNum(row[14]),
+      paz: parseNum(row[15]),
+      amor: parseNum(row[16]),
+      noviolencia: parseNum(row[17]),
+      
+      valorMasAlto: parseText(row[18]),
+      
+      interpVerdad: parseText(row[19]),
+      interpRectitud: parseText(row[20]),
+      interpPaz: parseText(row[21]),
+      interpAmor: parseText(row[22]),
+      interpNoViolencia: parseText(row[23])
     };
 
-    // Serialización final: convertir a JSON puro y de vuelta para garantizar
-    // que NO queden objetos Date ni tipos no serializables en el retorno.
-    // Esto previene el bug donde google.script.run recibe null silenciosamente.
     const resultado = {
       success: true,
-      candidato: candidato,
-      disc: disc,
-      valanti: valanti,
-      etiquetasValanti: ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia']
+      data: dataObj
     };
 
-    Logger.log('[getPruebasData] Retornando objeto exitoso para ID "%s"', targetId);
     return JSON.parse(JSON.stringify(resultado));
 
   } catch (error) {

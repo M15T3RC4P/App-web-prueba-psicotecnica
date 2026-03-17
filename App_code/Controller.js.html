@@ -87,7 +87,7 @@
         const reportContainer = document.getElementById('reportContainer');
         if (reportContainer) reportContainer.classList.remove('hidden');
 
-        const textFields = ['candName', 'candRole', 'candSede', 'candId', 'candAge', 'candGender', 'candEdu', 'candDate', 'discHighestChar', 'discFullInterpretation', 'valantiHighest'];
+        const textFields = ['candName', 'candRole', 'candSede', 'candId', 'candDate', 'discTargetPerfil', 'discTargetCaracteristicas', 'discTargetDescripcion', 'discTargetAporte', 'valantiHighest'];
         textFields.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = '---';
@@ -171,30 +171,69 @@
         const reportContainer = document.getElementById('reportContainer');
         if (reportContainer) reportContainer.classList.remove('hidden');
 
-        const { candidato, disc, valanti, etiquetasValanti } = response;
+        const { data } = response;
 
-        console.log('[Dashboard] candidato:', candidato);
-        console.log('[Dashboard] disc:', disc);
-        console.log('[Dashboard] valanti:', valanti);
+        console.log('[Dashboard] data:', data);
+
+        const candidato = {
+            fecha: data.fecha,
+            id: data.id,
+            nombre: data.nombre,
+            sede: data.sede,
+            cargo: data.cargo
+        };
+
+        const hasDisc = data.dominante > 0 || data.influyente > 0 || data.estable > 0 || data.minucioso > 0 || data.perfilMasAlto !== 'Sin información';
+
+        const disc = hasDisc ? {
+            D: data.dominante,
+            I: data.influyente,
+            S: data.estable,
+            C: data.minucioso,
+            perfil: data.perfilMasAlto,
+            caracteristicas: data.caracteristicasMasAlto,
+            descripcion: data.descripcionMasAlto,
+            aporte: data.aporteMasAlto
+        } : null;
+
+        const hasValanti = data.verdad > 0 || data.rectitud > 0 || data.paz > 0 || data.amor > 0 || data.noviolencia > 0 || data.valorMasAlto !== 'Sin información';
+
+        const valanti = hasValanti ? {
+            valor1: data.verdad,
+            valor2: data.rectitud,
+            valor3: data.paz,
+            valor4: data.amor,
+            valor5: data.noviolencia,
+            highestChar: data.valorMasAlto,
+            int1: data.interpVerdad,
+            int2: data.interpRectitud,
+            int3: data.interpPaz,
+            int4: data.interpAmor,
+            int5: data.interpNoViolencia
+        } : null;
+
+        const etiquetasValanti = ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
 
         renderCandidateInfo(candidato);
 
         // Renderizado Condicional DISC
-        // El backend devuelve disc=null cuando no hay datos, objeto con D/I/S/C cuando sí los hay.
         if (disc) {
             renderDiscTable(disc);
             renderDiscChart(disc);
-            setText('discHighestChar', disc.highestChar || 'Sin datos');
-            setText('discFullInterpretation', disc.interpretation || 'Sin interpretación disponible.');
+            setText('discTargetPerfil', disc.perfil);
+            setText('discTargetCaracteristicas', disc.caracteristicas);
+            setText('discTargetDescripcion', disc.descripcion);
+            setText('discTargetAporte', disc.aporte);
         } else {
             const tbody = document.getElementById('discTableBody');
             if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-500">Prueba DISC no realizada o sin datos</td></tr>';
-            setText('discHighestChar', 'Sin Datos');
-            setText('discFullInterpretation', 'El candidato no presenta resultados en esta prueba.');
+            setText('discTargetPerfil', 'Sin Datos');
+            setText('discTargetCaracteristicas', '---');
+            setText('discTargetDescripcion', 'El candidato no presenta resultados en esta prueba.');
+            setText('discTargetAporte', '---');
         }
 
         // Renderizado Condicional Valanti
-        // El backend devuelve valanti=null cuando no hay datos.
         if (valanti) {
             renderValantiTable(valanti, etiquetasValanti);
             renderValantiChart(valanti, etiquetasValanti);
@@ -233,9 +272,6 @@
         setText('candRole', data.cargo);
         setText('candSede', data.sede);
         setText('candId', data.cedula || data.id); // Soporte para ambos nombres de propiedad
-        setText('candAge', data.edad ? data.edad + " años" : "");
-        setText('candGender', data.genero);
-        setText('candEdu', data.estudios);
 
         // Fecha
         let applicationDate = '---';
@@ -267,7 +303,7 @@
         tbody.innerHTML = '';
         labels.forEach((label, index) => {
             const score = scores[index];
-            const intensity = score > 50 ? "Alto" : (score > 20 ? "Medio" : "Bajo"); // Ajustar umbrales según metodología real
+            const intensity = getNivel(score);
             const row = `
                 <tr>
                     <td class="p-2 font-medium">${label}</td>
@@ -335,11 +371,12 @@
 
         labels.forEach((label, index) => {
             const score = scores[index];
+            const intensity = getNivel(score);
             const row = `
                 <tr>
                     <td class="p-2 font-medium">${label}</td>
-                    <td class="p-2 text-center text-slate-500 font-medium text-sm">Estándar</td>
                     <td class="p-2 text-center font-bold" style="color: var(--color-teal)">${score}</td>
+                    <td class="p-2 text-center text-sm text-gray-500">${intensity}</td>
                 </tr>
             `;
             tbody.innerHTML += row;
@@ -437,6 +474,18 @@
     }
 
     // Helpers
+    function getNivel(puntaje) {
+        const p = parseInt(puntaje, 10);
+        if (isNaN(p)) return '---';
+        if (p <= 23) return 'Muy bajo';
+        if (p <= 33) return 'Bajo';
+        if (p <= 43) return 'Promedio Bajo';
+        if (p <= 53) return 'Promedio';
+        if (p <= 63) return 'Promedio Alto';
+        if (p <= 73) return 'Alto';
+        return 'Muy alto';
+    }
+
     function setText(id, text) {
         const el = document.getElementById(id);
         if (el) el.textContent = text ? text : '---';

@@ -116,7 +116,8 @@
         @page {
             /* AJUSTE 4: Márgenes reducidos A4 portrait */
             size: A4 portrait;
-            margin: 8mm 10mm 18mm 10mm; /* top right bottom left — bottom extra para footer fijo */
+            margin: 8mm 10mm 18mm 10mm;
+            /* top right bottom left — bottom extra para footer fijo */
         }
 
         @media print {
@@ -124,7 +125,8 @@
                 background: white !important;
                 margin: 0;
                 padding: 0;
-                padding-bottom: 40px; /* Espacio para que el footer fijo no tape el contenido */
+                padding-bottom: 40px;
+                /* Espacio para que el footer fijo no tape el contenido */
             }
 
             .print-container {
@@ -168,14 +170,16 @@
             }
 
             /* Tarjetas de interpretación Valanti */
-            #valantiInterpretationsGrid > div {
+            #valantiInterpretationsGrid>div {
                 page-break-inside: avoid;
                 break-inside: avoid;
             }
 
             /* Bloque de interpretación DISC */
-            #discHighestChar,
-            #discFullInterpretation {
+            #discTargetPerfil,
+            #discTargetCaracteristicas,
+            #discTargetDescripcion,
+            #discTargetAporte {
                 page-break-inside: avoid;
                 break-inside: avoid;
             }
@@ -188,7 +192,8 @@
                 right: 0;
                 border-top: 1px solid #e2e8f0;
                 background-color: #f8fafc;
-                padding: 0.5rem 1rem 4mm 1rem; /* 4mm de padding inferior = alineado al margen @page */
+                padding: 0.5rem 1rem 4mm 1rem;
+                /* 4mm de padding inferior = alineado al margen @page */
                 font-size: 0.7rem;
             }
         }
@@ -267,6 +272,8 @@
                         <span id="candRole" style="color: var(--primary-color); font-weight: 700;">Cargo</span>
                         <span>|</span>
                         <span id="candSede">Sede</span>
+                        <span>|</span>
+                        <span id="candId">ID</span>
                     </div>
                 </div>
                 <div style="text-align: right;">
@@ -274,25 +281,39 @@
                     <div id="candDate" style="font-size: 1.1rem; font-weight: 600; color: #334155;">---</div>
                 </div>
             </div>
+        </section>
 
-            <div
-                style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
-                <div>
-                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Cédula/ID</div>
-                    <div id="candId" style="font-weight: 600;">---</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Edad</div>
-                    <div id="candAge" style="font-weight: 600;">---</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Género</div>
-                    <div id="candGender" style="font-weight: 600;">---</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8;">Nivel Estudio</div>
-                    <div id="candEdu" style="font-weight: 600;">---</div>
-                </div>
+        <!-- Bloque Informativo Institucional -->
+        <section class="report-section" style="padding-top: 1.5rem; padding-bottom: 1.5rem; background-color: #ffffff;">
+            <div style="
+                background: linear-gradient(135deg, rgba(32, 142, 143, 0.05) 0%, rgba(217, 33, 39, 0.03) 100%);
+                border-left: 4px solid var(--primary-color);
+                border-right: 1px solid rgba(32, 142, 143, 0.2);
+                border-top: 1px solid rgba(32, 142, 143, 0.2);
+                border-bottom: 1px solid rgba(32, 142, 143, 0.2);
+                border-radius: 0.5rem;
+                padding: 1rem;
+                display: flex;
+                align-items: flex-start;
+                gap: 1rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            ">
+                <i class="fas fa-info-circle"
+                    style="color: var(--primary-color); font-size: 0.95rem; margin-top: 0.2rem;"></i>
+                <p style="
+                    margin: 0; 
+                    font-size: 0.75rem; 
+                    color: #475569; 
+                    line-height: 1.6; 
+                    font-style: italic;
+                    text-align: justify;
+                ">
+                    <strong style="color: var(--primary-color); font-style: normal;">Respetado líder,</strong> tenga
+                    presente que las pruebas psicotécnicas permiten identificar tendencias comportamentales y
+                    competencias del candidato. No obstante, sus resultados deben interpretarse de manera integral y
+                    complementarse con la entrevista y los demás elementos del proceso, sin considerarse como criterio
+                    único para la toma de decisiones.
+                </p>
             </div>
         </section>
 
@@ -305,7 +326,7 @@
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
                 <table class="report-table">
                     <thead>
                         <tr>
@@ -327,13 +348,28 @@
 
             <!-- Nuevo Bloque Interpretación DISC -->
             <div
-                style="margin-top: 2rem; border-left: 4px solid var(--secondary-color); background-color: #fff1f2; padding: 1.5rem; border-radius: 0.5rem;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #881337; font-size: 1.15rem; font-weight: 700;"
-                    id="discHighestChar">Característica Principal</h4>
-                <p id="discFullInterpretation"
-                    style="margin: 0; font-size: 0.95rem; color: #4c0519; line-height: 1.6; text-align: justify;">
-                    Interpretación detallada...
-                </p>
+                style="margin-top: 1.5rem; border-left: 4px solid var(--secondary-color); background-color: #fff1f2; padding: 1.5rem; border-radius: 0.5rem;">
+                <!-- 1. PERFIL: Mostrar directamente el valor como título -->
+                <h4 style="margin: 0 0 1rem 0; color: #881337; font-size: 1.25rem; font-weight: 800; text-transform: uppercase;"
+                    id="discTargetPerfil">Sin datos de perfil</h4>
+
+                <!-- 2. CARACTERÍSTICAS -->
+                <div style="margin-bottom: 0.75rem;">
+                    <span style="font-weight: 700; color: #4c0519;">Características:</span>
+                    <span id="discTargetCaracteristicas" style="color: #4c0519; font-size: 0.95rem;">---</span>
+                </div>
+
+                <!-- 3. DESCRIPCIÓN -->
+                <div style="margin-bottom: 0.75rem;">
+                    <span style="font-weight: 700; color: #4c0519;">Descripción del SER y comportamiento:</span>
+                    <span id="discTargetDescripcion" style="color: #4c0519; font-size: 0.95rem;">---</span>
+                </div>
+
+                <!-- 4. APORTE -->
+                <div>
+                    <span style="font-weight: 700; color: #4c0519;">Aporte al equipo:</span>
+                    <span id="discTargetAporte" style="color: #4c0519; font-size: 0.95rem;">---</span>
+                </div>
             </div>
         </section>
 
@@ -353,8 +389,8 @@
                         <thead>
                             <tr>
                                 <th>Valor</th>
-                                <th style="text-align: center;">Valor Esperado</th>
                                 <th style="text-align: center;">Puntaje</th>
+                                <th style="text-align: center;">Nivel</th>
                             </tr>
                         </thead>
                         <tbody id="valantiTableBody">
@@ -378,10 +414,9 @@
             <div style="margin-top: 2.5rem;">
                 <div
                     style="background-color: #f1f5f9; padding: 1.25rem; border-radius: 0.5rem; border-left: 4px solid var(--primary-color); margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                    <h4 style="margin: 0; color: #1e293b; font-size: 1.15rem; font-weight: 600;">Valor más destacado:
-                        <span id="valantiHighest"
-                            style="color: var(--primary-color); font-weight: 800; text-transform: uppercase;">---</span>
-                    </h4>
+                    <h5 style="margin: 0; color: #1e293b; font-size: 1.15rem; font-weight: 600;">Valor más destacado:
+                        <span id="valantiHighest" style="color:  var(--primary-color); font-weight: 600;">---</span>
+                    </h5>
                 </div>
 
                 <!-- Grilla de tarjetas para interpretaciones -->
