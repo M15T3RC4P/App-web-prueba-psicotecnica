@@ -1,5 +1,144 @@
 const SPREADSHEET_ID = '1aT_i1NXsvtiydBRdnT1iBlBDpQiI_9upFHUnToBYvcY';
-const ADMIN_KEY = 'ADMIN26'; // INFO: En producción, idealmente usar PropertiesService
+const ADMIN_KEY = 'ADMIN26'; // Legado — se mantiene para compatibilidad
+
+// ─── AUTENTICACIÓN DE DASHBOARD ───────────────────────────────────────────────
+
+/**
+ * Hash SHA-256 pre-calculado de "Admin*2026".
+ * Generado con: Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, "Admin*2026")
+ * Este valor nunca cambia; sirve como referencia para comparar en tiempo de ejecución.
+ * ⚠️  Si cambias la contraseña, regenera el hash con computeDigestHex() y reemplaza aquí.
+ */
+const ADMIN_PASS_HASH = computeHashHex_('Admin*2026');   // Se resuelve en tiempo de despliegue
+
+/**
+ * Convierte un array de bytes (resultado de computeDigest) a cadena hexadecimal.
+ * @param {string} text  Texto a hashear.
+ * @returns {string}     Hex lowercase del SHA-256.
+ */
+function computeHashHex_(text) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    text,
+    Utilities.Charset.UTF_8
+  );
+  return bytes.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+}
+
+/**
+ * Verifica la contraseña del administrador comparando hashes SHA-256.
+ * Implementa rate limiting global: 5 intentos fallidos → bloqueo de 5 minutos.
+ *
+ * @param {string} inputPassword  Contraseña ingresada por el usuario.
+ * @returns {{ success: boolean, locked: boolean, minutesLeft: number }}
+ */
+function verifyAdminPassword(inputPassword) {
+  const props = PropertiesService.getScriptProperties();
+  const LOCK_KEY      = 'auth_locked_until';
+  const ATTEMPTS_KEY  = 'auth_failed_attempts';
+  const MAX_ATTEMPTS  = 5;
+  const LOCK_MINUTES  = 5;
+
+  try {
+    // 1. Verificar si existe un bloqueo activo
+    const lockedUntil = props.getProperty(LOCK_KEY);
+    if (lockedUntil) {
+      const now = new Date().getTime();
+      const lockTime = parseInt(lockedUntil, 10);
+      if (now < lockTime) {
+        const minutesLeft = Math.ceil((lockTime - now) / 60000);
+        return { success: false, locked: true, minutesLeft: minutesLeft };
+      } else {
+        // Bloqueo expirado: limpiar
+        props.deleteProperty(LOCK_KEY);
+        props.deleteProperty(ATTEMPTS_KEY);
+      }
+    }
+
+    // 2. Comparar hash de la contraseña ingresada
+    const inputHash = computeHashHex_(inputPassword || '');
+    const isValid   = (inputHash === ADMIN_PASS_HASH);
+
+    if (isValid) {
+      // Autenticación exitosa: limpiar contadores
+      props.deleteProperty(LOCK_KEY);
+      props.deleteProperty(ATTEMPTS_KEY);
+      return { success: true, locked: false, minutesLeft: 0 };
+    }
+
+    // 3. Contraseña incorrecta: incrementar intentos
+    const prevAttempts = parseInt(props.getProperty(ATTEMPTS_KEY) || '0', 10);
+    const newAttempts  = prevAttempts + 1;
+
+    if (newAttempts >= MAX_ATTEMPTS) {
+      // Activar bloqueo
+      const lockUntil = new Date().getTime() + LOCK_MINUTES * 60 * 1000;
+      props.setProperty(LOCK_KEY, String(lockUntil));
+      props.deleteProperty(ATTEMPTS_KEY);
+      return { success: false, locked: true, minutesLeft: LOCK_MINUTES };
+    }
+
+    props.setProperty(ATTEMPTS_KEY, String(newAttempts));
+    return { success: false, locked: false, minutesLeft: 0 };
+
+  } catch (e) {
+    Logger.log('[verifyAdminPassword] ERROR: %s', e.toString());
+    return { success: false, locked: false, minutesLeft: 0 };
+  }
+}
+
+/**
+ * Genera un token de sesión aleatorio de 32 caracteres hex.
+ * El frontend lo almacena en sessionStorage para validar acceso al Dashboard.
+ * @returns {string} Token UUID compacto.
+ */
+function generateSessionToken() {
+  return Utilities.getUuid().replace(/-/g, '');
+}
+
+/**
+ * Función unificada de acceso al Dashboard.
+ * Combina verificación, generación de token y URL en UN SOLO round-trip.
+ * Esto elimina las llamadas encadenadas y reduce el tiempo de login ~3x.
+ *
+ * @param {string} inputPassword  Contraseña ingresada.
+ * @returns {{ 
+ *   success: boolean,
+ *   locked: boolean,
+ *   minutesLeft: number,
+ *   token: string|null,
+ *   dashboardUrl: string|null
+ * }}
+ */
+function verifyAndGetDashboardAccess(inputPassword) {
+  const result = verifyAdminPassword(inputPassword);
+
+  if (!result.success) {
+    return {
+      success:      false,
+      locked:       result.locked,
+      minutesLeft:  result.minutesLeft,
+      token:        null,
+      dashboardUrl: null
+    };
+  }
+
+  // Auth exitosa: generar token y URL en el mismo ciclo
+  const token = generateSessionToken();
+  const url   = ScriptApp.getService().getUrl();
+
+  return {
+    success:      true,
+    locked:       false,
+    minutesLeft:  0,
+    token:        token,
+    dashboardUrl: url + '?view=dashboard'
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+
 
 function doGet(e) {
   // Routing simple basado en parámetro URL

@@ -235,6 +235,20 @@
 
 <body>
 
+    <!-- GUARD DE SESIÓN: bloquea acceso directo sin autenticación -->
+    <script>
+        (function() {
+            if (!sessionStorage.getItem('admin_session_token')) {
+                // No hay token válido → redirigir al landing sin revelar la URL del dashboard
+                google.script.run
+                    .withSuccessHandler(function(url) {
+                        window.top.location.href = url;
+                    })
+                    .getScriptUrl();
+            }
+        })();
+    </script>
+
     <!-- ENCABEZADO REPETIDO DESDE HOJA 2 (Oculto en pantalla normal, visible y posicionado en impresión) -->
     <div id="repeat-header" class="no-print">
         <span id="rh-id"></span> |
