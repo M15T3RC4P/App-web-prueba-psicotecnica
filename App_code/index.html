@@ -78,9 +78,7 @@
 
             <!-- Acceso discreto al Dashboard (solo visible en esta pantalla) -->
             <div class="flex justify-end mb-2 pr-1">
-                <button
-                    onclick="openAdminModal()"
-                    title="Administrador"
+                <button onclick="openAdminModal()" title="Administrador"
                     style="background:none;border:none;color:#cbd5e1;cursor:pointer;padding:0.4rem 0.65rem;border-radius:0.5rem;transition:color 0.25s,background 0.25s;"
                     onmouseover="this.style.color='#94a3b8';this.style.background='rgba(0,0,0,0.04)'"
                     onmouseout="this.style.color='#cbd5e1';this.style.background='none'">
@@ -115,7 +113,7 @@
                         <!-- Título -->
                         <h1
                             style="font-size:1.6rem;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;line-height:1.3;margin-bottom:1.25rem;">
-                            Pruebas Psicotécnicas<br>Gestión de Talento Humano
+                            Pruebas Psicotécnicas
                         </h1>
 
                         <!-- Separador decorativo -->
@@ -195,8 +193,9 @@
                     <i class="fas fa-info-circle mt-1 mr-3"></i>
                     <div>
                         <strong>Instrucciones:</strong>
-                        <p>Debes completar <strong>ambas pruebas</strong>. Puedes elegir el orden. Asegúrate de tener 45
-                            minutos disponibles sin interrupciones.</p>
+                        <p>Debes completar <strong>ambas pruebas</strong>. Puedes elegir el orden. Asegúrate de contar
+                            con una disponibilidad de entre 40
+                            minutos o 1 hora.</p>
                     </div>
                 </div>
 
@@ -266,18 +265,28 @@
                     </div>
                 </div>
 
+                <div id="question-map" class="flex gap-2 overflow-x-auto pb-4 mb-6 border-b" style="scrollbar-width: thin;">
+                    <!-- Los círculos se generan dinámicamente -->
+                </div>
+
                 <div id="dynamic-container" class="space-y-6 min-h-[200px] animate-fadeIn">
                     <!-- PREGUNTAS AQUI -->
                 </div>
 
-                <div class="mt-8 pt-4 border-t flex justify-between items-center">
+                <div class="mt-8 pt-4 border-t flex flex-col md:flex-row gap-4 justify-between items-center">
                     <!-- Cronómetro global -->
-                    <span id="test-timer" class="test-timer">Tiempo: 56:00</span>
+                    <span id="test-timer" class="test-timer text-lg mb-2 md:mb-0">Tiempo: 1:20:00</span>
 
-                    <button onclick="nextQuestion()"
-                        class="btn-primary px-10 py-3 rounded-lg font-bold shadow-lg flex items-center">
-                        Siguiente <i class="fas fa-arrow-right ml-2"></i>
-                    </button>
+                    <div class="flex gap-3 w-full md:w-auto justify-end">
+                        <button id="btn-prev" onclick="prevQuestion()"
+                            class="px-6 py-3 rounded-lg font-bold shadow-md bg-slate-100/80 text-slate-600 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center flex-1 md:flex-none backdrop-blur-sm border border-slate-200">
+                            <i class="fas fa-arrow-left mr-2"></i> Anterior
+                        </button>
+                        <button id="btn-next" onclick="nextQuestion()"
+                            class="btn-primary px-8 py-3 rounded-lg font-bold shadow-lg flex items-center justify-center flex-1 md:flex-none transition">
+                            Siguiente <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -385,13 +394,8 @@
                     position:absolute; left:0.9rem; top:50%; transform:translateY(-50%);
                     color:#94a3b8; font-size:0.9rem; pointer-events:none;
                 "></i>
-                <input
-                    type="password"
-                    id="auth-password-input"
-                    placeholder="Contraseña"
-                    autocomplete="current-password"
-                    onkeypress="if(event.key==='Enter') submitAdminPassword()"
-                    style="
+                <input type="password" id="auth-password-input" placeholder="Contraseña" autocomplete="current-password"
+                    onkeypress="if(event.key==='Enter') submitAdminPassword()" style="
                         width:100%; box-sizing:border-box;
                         padding: 0.75rem 1rem 0.75rem 2.5rem;
                         border: 1.5px solid #cbd5e1;
@@ -403,8 +407,7 @@
                         transition: border-color 0.2s, box-shadow 0.2s;
                     "
                     onfocus="this.style.borderColor='rgb(32,142,143)';this.style.boxShadow='0 0 0 3px rgba(32,142,143,0.15)'"
-                    onblur="this.style.borderColor='#cbd5e1';this.style.boxShadow='none'"
-                >
+                    onblur="this.style.borderColor='#cbd5e1';this.style.boxShadow='none'">
             </div>
 
             <!-- Mensaje de error / bloqueo -->
@@ -418,10 +421,7 @@
 
             <!-- Botones -->
             <div style="display:flex; gap:0.75rem; margin-top:0.5rem;">
-                <button
-                    id="auth-cancel-btn"
-                    onclick="closeAdminModal()"
-                    style="
+                <button id="auth-cancel-btn" onclick="closeAdminModal()" style="
                         flex:1; padding:0.7rem;
                         border: 1.5px solid #e2e8f0;
                         border-radius: 0.75rem;
@@ -430,15 +430,10 @@
                         font-size: 0.9rem; font-weight:600;
                         cursor:pointer;
                         transition: background 0.2s, color 0.2s;
-                    "
-                    onmouseover="this.style.background='#f8fafc'"
-                    onmouseout="this.style.background='white'"
-                >Cancelar</button>
+                    " onmouseover="this.style.background='#f8fafc'"
+                    onmouseout="this.style.background='white'">Cancelar</button>
 
-                <button
-                    id="auth-submit-btn"
-                    onclick="submitAdminPassword()"
-                    style="
+                <button id="auth-submit-btn" onclick="submitAdminPassword()" style="
                         flex:1.5; padding:0.7rem;
                         border: none;
                         border-radius: 0.75rem;
@@ -449,10 +444,7 @@
                         box-shadow: 0 4px 12px rgba(32,142,143,0.3);
                         transition: opacity 0.2s, box-shadow 0.2s;
                         display:flex; align-items:center; justify-content:center; gap:0.5rem;
-                    "
-                    onmouseover="this.style.opacity='0.9'"
-                    onmouseout="this.style.opacity='1'"
-                >
+                    " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                     <i class="fas fa-sign-in-alt"></i> Ingresar
                 </button>
             </div>
@@ -468,14 +460,21 @@
 
     <style>
         @keyframes authModalIn {
-            from { opacity:0; transform:scale(0.93) translateY(12px); }
-            to   { opacity:1; transform:scale(1)   translateY(0);     }
+            from {
+                opacity: 0;
+                transform: scale(0.93) translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
     </style>
 
     <script>
         // ── Estado local del modal de autenticación ──────────────────────────
-        let _authAttempts  = 0;         // Intentos fallidos en esta sesión (cliente)
+        let _authAttempts = 0;         // Intentos fallidos en esta sesión (cliente)
         let _authLockTimer = null;      // Timer del countdown de 30 seg
         const MAX_LOCAL_ATTEMPTS = 3;
         const LOCAL_LOCK_SECONDS = 30;
@@ -512,7 +511,7 @@
             const btn = document.getElementById('auth-submit-btn');
             btn.disabled = false;
             btn.style.opacity = '1';
-            btn.style.cursor  = 'pointer';
+            btn.style.cursor = 'pointer';
             document.getElementById('auth-countdown-msg').style.display = 'none';
         }
 
@@ -520,7 +519,7 @@
             const btn = document.getElementById('auth-submit-btn');
             btn.disabled = true;
             btn.style.opacity = '0.5';
-            btn.style.cursor  = 'not-allowed';
+            btn.style.cursor = 'not-allowed';
 
             let remaining = LOCAL_LOCK_SECONDS;
             const cdMsg = document.getElementById('auth-countdown-msg');
@@ -551,10 +550,10 @@
 
             // Feedback visual de carga
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
-            btn.disabled  = true;
+            btn.disabled = true;
 
             google.script.run
-                .withSuccessHandler(function(result) {
+                .withSuccessHandler(function (result) {
                     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Ingresar';
 
                     if (result.locked) {
@@ -586,9 +585,9 @@
                         btn.style.opacity = '1';
                     }
                 })
-                .withFailureHandler(function(err) {
+                .withFailureHandler(function (err) {
                     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Ingresar';
-                    btn.disabled  = false;
+                    btn.disabled = false;
                     showAuthError('Error de conexión. Intenta de nuevo.');
                     console.error('[Auth]', err);
                 })

@@ -1,5 +1,5 @@
+/** ID del Google Spreadsheet que contiene todas las hojas de resultados. */
 const SPREADSHEET_ID = '1aT_i1NXsvtiydBRdnT1iBlBDpQiI_9upFHUnToBYvcY';
-const ADMIN_KEY = 'ADMIN26'; // Legado — se mantiene para compatibilidad
 
 // ─── AUTENTICACIÓN DE DASHBOARD ───────────────────────────────────────────────
 
@@ -138,10 +138,26 @@ function verifyAndGetDashboardAccess(inputPassword) {
 
 // ──────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Abre la hoja de cálculo y retorna la pestaña con el nombre indicado.
+ * Centraliza el acceso para evitar múltiples llamadas a openById().
+ * @param {string} sheetName  Nombre exacto de la pestaña.
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet}
+ * @throws {Error} Si la hoja no existe.
+ */
+function _getSheet(sheetName) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) throw new Error(`Hoja '${sheetName}' no encontrada en el Spreadsheet.`);
+  return sheet;
+}
 
-
+/**
+ * Punto de entrada HTTP de la aplicación.
+ * Enruta a Dashboard si el parámetro ?view=dashboard está presente;
+ * de lo contrario sirve la pantalla de evaluación para candidatos.
+ */
 function doGet(e) {
-  // Routing simple basado en parámetro URL
   if (e.parameter && e.parameter.view === 'dashboard') {
     return HtmlService.createTemplateFromFile('Dashboard')
       .evaluate()
@@ -149,8 +165,6 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
-  
-
 
   return HtmlService.createTemplateFromFile('index')
     .evaluate()
@@ -159,10 +173,12 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+/** Incluye el contenido de un archivo HTML parcial (usando <?!= include() ?>). */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+/** Retorna la URL pública del Web App desplegado. */
 function getScriptUrl() {
   return ScriptApp.getService().getUrl();
 }
@@ -244,38 +260,48 @@ function getStaticQuestions() {
 }
 
 
-// --- GUARDADO DE RESPUESTAS ---
+/**
+ * Guarda el array de respuestas de una prueba en la hoja correspondiente.
+ * Usa LockService para prevenir condiciones de carrera con sesiones concurrentes.
+ *
+ * @param {string}   testType  'Valanti' o 'DISC'.
+ * @param {Object}   userData  Datos del candidato: { id, nombre, sede, cargo }.
+ * @param {number[]} answers   Array plano de respuestas ya validadas.
+ * @returns {{ success: boolean, data: null, error: string|null }}
+ */
 function saveTestResults(testType, userData, answers) {
-  // LockService para evitar condiciones de carrera (concurrencia)
+  // Validación de entrada
+  if (!testType || typeof testType !== 'string') {
+    return { success: false, data: null, error: 'Tipo de prueba inválido.' };
+  }
+  if (!userData || !userData.id || !userData.nombre) {
+    return { success: false, data: null, error: 'Datos del candidato incompletos.' };
+  }
+  if (!Array.isArray(answers)) {
+    return { success: false, data: null, error: 'Las respuestas deben ser un arreglo.' };
+  }
+
   const lock = LockService.getScriptLock();
   try {
-    // Esperar hasta 10 segundos por el lock
-    lock.waitLock(10000); 
+    lock.waitLock(10000);
 
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = ss.getSheetByName(testType); 
-    
-    if(!sheet) return { success: false, error: "No se encontró la hoja " + testType };
+    const sheet = _getSheet(testType);
 
     const finalRow = [
       new Date(),
       userData.id,
       userData.nombre,
-      userData.edad,
-      userData.genero,
       userData.sede,
       userData.cargo,
-      userData.estudios,
       ...answers
     ];
-    
-    sheet.appendRow(finalRow);
-    return { success: true };
 
-  } catch(e) {
-    return { success: false, error: "Error de servidor: " + e.toString() };
+    sheet.appendRow(finalRow);
+    return { success: true, data: null, error: null };
+
+  } catch (e) {
+    return { success: false, data: null, error: 'Error de servidor: ' + e.toString() };
   } finally {
-    // Siempre liberar el lock
     lock.releaseLock();
   }
 }

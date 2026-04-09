@@ -283,9 +283,8 @@
     50%       { opacity: 0.45; }
   }
 
-  /* Ajustes impresión */
+  /* ─── Ajustes de Impresión ─────────────────────────────────────────────── */
   @media print {
-
     body {
       background: white !important;
       color: black !important;
@@ -294,11 +293,7 @@
       print-color-adjust: exact !important;
     }
 
-    /* Ocultar el repeat-header por defecto */
-    #repeat-header {
-      display: none;
-    }
-
+    /* Ocultar elementos decorativos e interactivos en impresión */
     .no-print {
       display: none !important;
     }
@@ -310,7 +305,7 @@
       padding: 0 !important;
     }
 
-    /* ENCABEZADO REPETIDO DESDE HOJA 2 */
+    /* Encabezado repetido en hojas 2+ (posicionado fijo en parte superior) */
     #repeat-header {
       display: block !important;
       position: fixed !important;

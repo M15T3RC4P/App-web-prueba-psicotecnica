@@ -82,8 +82,6 @@
     }
 
     function clearDashboard() {
-        // En lugar de hacer que desaparezca el dashboard con 'hidden', simplemente lo vaciamos.
-        // Esto evita el bug donde el dashboard se evapora si no se encuentran datos del candidato.
         const reportContainer = document.getElementById('reportContainer');
         if (reportContainer) reportContainer.classList.remove('hidden');
 
@@ -150,17 +148,11 @@
         const spinner = document.getElementById('loadingSpinner');
         if (spinner) spinner.style.display = 'none';
 
-        // GUARD: GAS puede llamar withSuccessHandler(null) si la función del servidor
-        // retorna un tipo no serializable (ej: Date). Nunca debería pasar con los fixes
-        // aplicados, pero se mantiene como defensa en profundidad.
+        // Defensa ante respuestas vacías del servidor (GAS puede retornar null en casos extremos)
         if (response === null || response === undefined) {
-            console.error('[Dashboard] ERROR: La respuesta del servidor es null/undefined.');
-            showToast('Error interno del servidor. Revisa Apps Script → Ejecuciones para ver el Logger.', 'error');
+            showToast('Error interno del servidor. Intente de nuevo.', 'error');
             return;
         }
-
-        // Log de depuración (visible en la consola del navegador con F12)
-        console.log('[Dashboard] Respuesta del backend:', JSON.stringify(response, null, 2));
 
         if (!response.success) {
             showToast(response.error || "No se encontraron datos", "error");
@@ -172,8 +164,6 @@
         if (reportContainer) reportContainer.classList.remove('hidden');
 
         const { data } = response;
-
-        console.log('[Dashboard] data:', data);
 
         const candidato = {
             fecha: data.fecha,
@@ -252,9 +242,8 @@
 
     function handleError(error) {
         const spinner = document.getElementById('loadingSpinner');
-        if (spinner) spinner.classList.add('hidden');
-        showToast("Error de conexión: " + error.message, "error");
-        console.error(error);
+        if (spinner) spinner.style.display = 'none';
+        showToast('Error de conexión. Verifica tu conexión e intenta de nuevo.', 'error');
     }
 
     // Navegación Segura a Inicio
@@ -357,7 +346,6 @@
             parseFloat(disc.S) || 0,
             parseFloat(disc.C) || 0
         ];
-        console.log('[renderDiscChart] scores:', scores);
 
         discChartInstance = new Chart(ctx, {
             type: 'bar',
@@ -426,7 +414,6 @@
             parseFloat(valanti.valor4) || 0,
             parseFloat(valanti.valor5) || 0
         ];
-        console.log('[renderValantiChart] scores:', scores);
 
         if (!labels || !labels[0]) {
             labels = ['Verdad', 'Rectitud', 'Paz', 'Amor', 'No Violencia'];
